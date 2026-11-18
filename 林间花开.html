@@ -1,0 +1,1535 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>林间花开</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<style>
+  :root { --paper: #f2ede2; --ink: #3a3633; }
+  html, body {
+    margin: 0; height: 100%; background: var(--paper); overflow: hidden;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  #title {
+    position: fixed; left: 0; right: 0; top: 36%; text-align: center; pointer-events: none;
+    font-family: 'ZCOOL XiaoWei', serif; color: var(--ink);
+    font-size: clamp(28px, 4.2vw, 56px); letter-spacing: .4em; padding-left: .4em;
+    opacity: 0; transition: opacity 1.8s ease;
+    text-shadow: 0 0 10px var(--paper), 0 0 22px var(--paper), 0 0 40px var(--paper);
+  }
+  #title::before {
+    content: ""; position: absolute; left: 50%; top: 50%; width: min(70vw, 720px); height: 2.6em;
+    transform: translate(-50%, -50%); z-index: -1; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(242, 237, 226, .92), rgba(242, 237, 226, 0));
+  }
+  #title small { display: block; font-size: .32em; letter-spacing: .6em; margin-top: 1em; opacity: .65; }
+  #title.show { opacity: .88; }
+  #mode, #replay {
+    position: fixed; bottom: calc(16px + env(safe-area-inset-bottom));
+    font-family: 'ZCOOL XiaoWei', serif; font-size: 15px; color: var(--ink);
+    background: rgba(242, 237, 226, .72); border: 1px solid rgba(58, 54, 51, .3);
+    border-radius: 999px; padding: 8px 18px; cursor: pointer; opacity: 0; pointer-events: none;
+    transition: opacity 1.2s; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    -webkit-tap-highlight-color: transparent;
+  }
+  #mode { left: 18px; }
+  #replay { right: 18px; }
+  #mode.show, #replay.show { opacity: 1; pointer-events: auto; }
+  #replay:hover, #mode:hover { background: rgba(255, 252, 245, .9); }
+  #hint {
+    position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom));
+    transform: translateX(-50%); pointer-events: none;
+    font-family: 'ZCOOL XiaoWei', serif; font-size: 15px; letter-spacing: .12em; color: var(--ink); white-space: nowrap;
+    opacity: 0; transition: opacity 1.4s; text-shadow: 0 0 8px var(--paper), 0 0 16px var(--paper);
+  }
+  #hint.show { opacity: .85; }
+  #hint kbd {
+    display: inline-block; min-width: 1.4em; padding: 1px 6px; margin: 0 1px; border: 1px solid rgba(58, 54, 51, .45);
+    border-bottom-width: 2px; border-radius: 5px; font: inherit; font-size: 13px; background: rgba(242, 237, 226, .8);
+  }
+  #stick, #jump-btn {
+    display: none; position: fixed; z-index: 5; touch-action: none;
+    -webkit-tap-highlight-color: transparent; opacity: 0; pointer-events: none; transition: opacity .6s;
+  }
+  body.touch-ui #stick.show, body.touch-ui #jump-btn.show { display: block; opacity: 1; pointer-events: auto; }
+  @media (hover: none) and (pointer: coarse) {
+    #stick.show, #jump-btn.show { display: block; opacity: 1; pointer-events: auto; }
+  }
+  #stick {
+    left: 22px; bottom: calc(74px + env(safe-area-inset-bottom));
+    width: 112px; height: 112px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(242, 237, 226, .45), rgba(242, 237, 226, .22));
+    border: 1.5px solid rgba(58, 54, 51, .28);
+    box-shadow: 0 2px 12px rgba(58, 54, 51, .08);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  }
+  #stick-knob {
+    position: absolute; left: 50%; top: 50%; width: 44px; height: 44px;
+    margin: -22px 0 0 -22px; border-radius: 50%; pointer-events: none;
+    background: rgba(58, 54, 51, .52); border: 1.5px solid rgba(242, 237, 226, .85);
+    box-shadow: 0 2px 8px rgba(58, 54, 51, .2);
+  }
+  #jump-btn {
+    right: 24px; bottom: calc(84px + env(safe-area-inset-bottom));
+    width: 64px; height: 64px; border-radius: 50%;
+    font-family: 'ZCOOL XiaoWei', serif; font-size: 18px; color: var(--ink);
+    background: rgba(242, 237, 226, .58); border: 1.5px solid rgba(58, 54, 51, .32);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  }
+  #jump-btn:active { transform: scale(.92); background: rgba(242, 237, 226, .85); }
+  @media (max-width: 960px) {
+    #hint { font-size: 13px; white-space: normal; width: 88vw; text-align: center; bottom: calc(68px + env(safe-area-inset-bottom)); }
+  }
+  body.touch-ui #hint { top: calc(18px + env(safe-area-inset-top)); bottom: auto; width: 90vw; text-align: center; white-space: normal; font-size: 13px; }
+  @media (hover: none) and (pointer: coarse) {
+    #hint { top: calc(18px + env(safe-area-inset-top)); bottom: auto; width: 90vw; text-align: center; white-space: normal; font-size: 13px; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="title">林间花开<small>颜色从脚下漫开</small></div>
+<div id="hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 走 · <kbd>Shift</kbd> 跑 · <kbd>空格</kbd> 跳 · 拖动鼠标转视角 · 滚轮远近</div>
+<div id="stick" aria-label="移动摇杆"><div id="stick-knob"></div></div>
+<button id="jump-btn" aria-label="跳跃">跳</button>
+<button id="mode">▶ 自动演示</button>
+<button id="replay">↻ 重新开始</button>
+<script type="module">
+// js/main.js
+import * as THREE10 from "three";
+
+// js/materials.js
+import * as THREE from "three";
+
+// js/glsl.js
+var NOISE = (
+  /* glsl */
+  `
+float hash12(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+float hash13(vec3 p3){ p3 = fract(p3 * 0.1031); p3 += dot(p3, p3.zyx + 31.32); return fract((p3.x + p3.y) * p3.z); }
+float vnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash12(i), hash12(i + vec2(1.0, 0.0)), u.x),
+             mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+float vnoise3(vec3 p){
+  vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(hash13(i), hash13(i + vec3(1,0,0)), f.x), mix(hash13(i + vec3(0,1,0)), hash13(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(hash13(i + vec3(0,0,1)), hash13(i + vec3(1,0,1)), f.x), mix(hash13(i + vec3(0,1,1)), hash13(i + vec3(1,1,1)), f.x), f.y), f.z);
+}
+float fbm(vec2 p){
+  float s = 0.0, a = 0.5;
+  for (int i = 0; i < 4; i++){ s += a * vnoise(p); p = p * 2.03 + vec2(17.1, 9.2); a *= 0.5; }
+  return s / 0.9375;
+}
+`
+), COMMON = (
+  /* glsl */
+  `
+uniform float uTime;
+uniform sampler2D uMask;
+uniform vec4 uMaskB;
+uniform vec3 uBurstPos;
+uniform float uBurstR;
+uniform vec3 uSunDir;
+uniform vec3 uPaper;
+uniform vec3 uHaze;
+
+float lum(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }
+
+// 0 = \u94C5\u7B14\u7EBF\u7A3F\uFF0C1 = \u4E0A\u8272\u3002\u811A\u5370\u906E\u7F69 + \u82B1\u6811\u7206\u53D1\u7684\u7403\u5F62\u6269\u6563\uFF0C\u8FB9\u7F18\u5E26\u6C34\u5F69\u6655\u67D3\u7684\u566A\u58F0
+float revealAt(vec3 w){
+  vec2 uv = (w.xz - uMaskB.xy) / uMaskB.zw;
+  float m = texture2D(uMask, uv).r;
+  float n = fbm(w.xz * 0.42 + w.y * 0.25);
+  float v = smoothstep(0.43, 0.57, m + (n - 0.5) * 0.6);
+  float d = length(w - uBurstPos) + (n - 0.5) * 6.0;
+  float b = (1.0 - smoothstep(uBurstR - 2.5, uBurstR, d)) * step(0.001, uBurstR);
+  return max(v, b);
+}
+`
+), FRAG = (
+  /* glsl */
+  `
+float hline(float c, float wd){
+  float aa = fwidth(c);
+  float d = abs(fract(c + 0.5) - 0.5);
+  float l = 1.0 - smoothstep(wd * 0.5, wd * 0.5 + aa * 1.2 + 0.001, d);
+  l *= smoothstep(0.0, 0.05, wd);
+  return mix(l, wd, smoothstep(0.3, 0.75, aa));
+}
+
+// \u4E00\u7EC4\u65AD\u7EED\u7684\u94C5\u7B14\u6392\u7EBF\uFF1A\u6BCF\u6839\u7EBF\u6309\u201C\u6697\u5EA6\u201D\u51B3\u5B9A\u51FA\u4E0D\u51FA\u73B0\uFF0C\u6CBF\u7EBF\u65B9\u5411\u518D\u65AD\u6210\u957F\u77ED\u4E0D\u4E00\u7684\u7B14\u89E6
+float strokeSet(vec3 w, vec3 dir, vec3 along, float dark, float seed){
+  float c = dot(w, dir) * 9.0 + vnoise3(w * 1.1 + seed) * 0.8;
+  float k = floor(c + 0.5);
+  float d = abs(c - k);
+  float aa = fwidth(c);
+  float s = dot(w, along) * 1.7 + hash12(vec2(k, seed)) * 7.0;
+  float seg = floor(s);
+  float amt = clamp(dark * 1.25 - 0.1, 0.0, 1.0);
+  float present = step(hash12(vec2(k * 1.37 + seg * 0.71, seed + 3.1)), amt);
+  float f = fract(s);
+  float gap = smoothstep(0.0, 0.07, f) * smoothstep(1.0, 0.9, f);
+  float wd = 0.09 + 0.12 * dark;
+  float l = (1.0 - smoothstep(wd * 0.5, wd * 0.5 + aa * 1.2 + 0.001, d)) * present * gap;
+  return mix(l, wd * amt, smoothstep(0.3, 0.75, aa));
+}
+
+// \u4E24\u7EC4\u6392\u7EBF\uFF1A\u4EAE\u5904\u7A7A\u767D\uFF0C\u6697\u5904\u5355\u6392\u7EBF\uFF0C\u66F4\u6697\u5904\u4EA4\u53C9\u6392\u7EBF
+float hatch(vec3 w, vec3 N, float dark){
+  vec3 d1 = normalize(vec3(0.62, 0.70, 0.35));
+  vec3 d2 = normalize(vec3(-0.58, 0.62, 0.52));
+  vec3 a1 = normalize(cross(d1, vec3(0.3, 0.2, 1.0)));
+  vec3 a2 = normalize(cross(d2, vec3(1.0, 0.2, 0.3)));
+  float h1 = strokeSet(w, d1, a1, dark, 1.0) * (1.0 - smoothstep(0.7, 0.95, abs(dot(N, d1))));
+  float h2 = strokeSet(w, d2, a2, (dark - 0.4) * 1.6, 5.0) * (1.0 - smoothstep(0.7, 0.95, abs(dot(N, d2))));
+  float g = 0.7 + 0.3 * vnoise3(w * 11.0);
+  return max(h1, h2 * 0.9) * g;
+}
+
+varying float vT;
+
+// \u5409\u535C\u529B\u5F0F\u7684\u67D4\u548C\u4E0A\u8272\uFF1A\u6696\u5149\u3001\u51B7\u5F71\u3001\u5929\u5149\u8865\u8272\u3001\u8FB9\u7F18\u9006\u5149\u3001\u989C\u6599\u6591\u9A73\uFF1B\u6811\u53F6/\u82B1\u56E2\u52A0\u7B14\u89E6\u6591\u70B9
+vec3 painted(vec3 base, vec3 N, vec3 V, vec3 w){
+  float ndl = dot(N, uSunDir);
+  float fol = 0.0, lf = 3.0;
+#ifdef FOLIAGE
+  fol = vT;
+#endif
+#ifdef BLOSSOM
+  fol = 1.0; lf = 5.5;
+#endif
+  float leaf = vnoise3(w * lf) * 0.65 + vnoise3(w * lf * 2.3) * 0.35;
+  ndl += (leaf - 0.5) * 0.9 * fol;
+  float lit = smoothstep(-0.22, 0.48, ndl);
+#ifdef ALWAYS
+  // \u89D2\u8272\uFF1A\u4ECE\u955C\u5934\u65B9\u5411\u8865\u4E00\u70B9\u67D4\u5149\uFF0C\u6697\u90E8\u504F\u6696\uFF0C\u4EFB\u4F55\u89D2\u5EA6\u770B\u90FD\u6E05\u695A
+  lit = max(lit, clamp(dot(N, V), 0.0, 1.0) * 0.6);
+  vec3 sh = base * vec3(0.80, 0.70, 0.74);
+  vec3 li = base * vec3(1.06, 1.02, 0.96);
+#elif defined(BLOSSOM)
+  vec3 sh = base * vec3(0.88, 0.68, 0.74);
+  vec3 li = base * vec3(1.05, 1.02, 1.0) + vec3(0.05, 0.04, 0.04);
+#else
+  vec3 sh = base * vec3(0.52, 0.60, 0.82);
+  vec3 li = base * vec3(1.10, 1.04, 0.90);
+#endif
+  vec3 c = mix(sh, li, lit);
+  c += vec3(0.04, 0.06, 0.09) * (N.y * 0.5 + 0.5);
+  float rim = pow(1.0 - max(dot(N, V), 0.0), 3.0);
+  c += vec3(1.0, 0.9, 0.7) * rim * 0.10 * (0.4 + lit);
+  float fl1 = smoothstep(0.76, 0.84, vnoise3(w * lf * 3.1));
+  float fl2 = smoothstep(0.78, 0.86, vnoise3(w * lf * 2.7 + 9.0));
+  c = mix(c, li * 1.12 + 0.03, fl1 * lit * 0.55 * fol);
+  c = mix(c, sh * 0.82, fl2 * (1.0 - lit) * 0.6 * fol);
+  float pn = fbm(w.xz * 1.3 + w.y * 0.9);
+  c *= 0.9 + 0.2 * pn;
+  return c;
+}
+
+vec3 sketched(vec3 base, vec3 N, vec3 w){
+  float ndl = dot(N, uSunDir);
+  float tone = smoothstep(-0.35, 0.65, ndl);
+  float dark = clamp((1.0 - tone) * 0.8 + (0.45 - lum(base)) * 0.7, 0.0, 1.0);
+  float h = hatch(w, N, dark);
+  return uPaper * (1.0 - h * 0.55) * (1.0 - dark * 0.06);
+}
+
+// \u6DF7\u5408\u7EBF\u7A3F\u4E0E\u4E0A\u8272\uFF1A\u4EA4\u754C\u5904\u52A0\u4E00\u5708\u6C34\u5F69\u79EF\u8272\uFF0C\u518D\u53E0\u7A7A\u6C14\u900F\u89C6
+vec3 finish(vec3 sk, vec3 cc, float r, vec3 w){
+  float rim = r * (1.0 - r) * 4.0;
+  cc *= 1.0 - rim * 0.22;
+  vec3 c = mix(sk, cc, r);
+  float d = length(w - cameraPosition);
+  float f = (1.0 - exp(-max(d - 14.0, 0.0) * 0.024)) * 0.9;
+  return mix(c, mix(uPaper, uHaze, r), f);
+}
+`
+);
+
+// js/materials.js
+var U = {
+  uTime: { value: 0 },
+  uMask: { value: null },
+  uMaskB: { value: new THREE.Vector4() },
+  uBurstPos: { value: new THREE.Vector3() },
+  uBurstR: { value: 0 },
+  uSunDir: { value: new THREE.Vector3(-0.55, 0.72, 0.42).normalize() },
+  uPaper: { value: new THREE.Color(0.95, 0.935, 0.9) },
+  uHaze: { value: new THREE.Color(0.74, 0.84, 0.83) },
+  uSky: { value: 0 },
+  uGirl: { value: new THREE.Vector4(0, 0, 9, 0) },
+  uBloom: { value: 0 },
+  uTree: { value: new THREE.Vector3() },
+  uPetalT: { value: -1 },
+  uGroundMin: { value: -1 }
+}, UBER_VS = (
+  /* glsl */
+  `
+attribute vec3 aCol;
+attribute float aTint;
+uniform float uWind;
+uniform float uBloom;
+uniform vec4 uCloak;
+uniform vec2 uCloakY;
+varying vec3 vW; varying vec3 vN; varying vec3 vC; varying float vT;
+void main(){
+  vec3 p = position;
+  vT = aTint;
+  vec3 col = aCol;
+#ifdef USE_INSTANCING_COLOR
+  col = mix(col, col * instanceColor, aTint);
+#endif
+  mat4 im = mat4(1.0);
+#ifdef USE_INSTANCING
+  im = instanceMatrix;
+#endif
+#ifdef BLOSSOM
+  float seed = fract(sin(dot(im[3].xyz, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+  float b = clamp((uBloom - seed * 0.45) / 0.55, 0.0, 1.0);
+  p *= 0.5 + 0.5 * b + sin(b * 3.14159) * 0.22;
+#endif
+#ifdef FLOWER
+  vec3 w0 = (modelMatrix * im * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+  float fr = revealAt(w0);
+  float open = mix(0.4, 1.0, fr) + sin(fr * 3.14159) * 0.25;
+  if (aTint > 0.5) { p.xz *= open; p.y += (1.0 - fr) * 0.012; }
+#endif
+#ifdef GRASS
+  // \u7EBF\u7A3F\u91CC\u7684\u8349\u53C8\u7A00\u53C8\u77EE\uFF1B\u989C\u8272\u6F2B\u5230\u65F6\u4E00\u4E0B\u5B50\u957F\u9AD8
+  vec3 g0 = (modelMatrix * im * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+  float gr = revealAt(g0);
+  float keep = step(0.5, fract(sin(dot(g0.xz, vec2(12.9898, 78.233))) * 43758.5453));
+  float grow = mix(0.38 * keep, 1.0, gr) + sin(gr * 3.14159) * 0.12;
+  p.y *= grow; p.z *= grow;
+#endif
+#ifdef CLOAK
+  float f = smoothstep(uCloakY.x, uCloakY.y, p.y);
+  p.z -= uCloak.x * f * f * 0.16;
+  p.x += sin(uCloak.w + p.y * 9.0) * uCloak.y * f * 0.03;
+  p.z += sin(uCloak.w * 2.0 + atan(p.x, p.z) * 3.0) * uCloak.y * f * 0.02;
+#endif
+  vec4 wp = modelMatrix * im * vec4(p, 1.0);
+#ifdef WIND
+  float hh = max(p.y, 0.0);
+  float ph = uTime * 1.6 + wp.x * 0.21 + wp.z * 0.17;
+  float g = sin(ph) + 0.5 * sin(ph * 2.3 + 1.0);
+  wp.x += g * uWind * hh * hh;
+  wp.z += cos(ph * 0.7) * uWind * hh * hh * 0.6;
+#endif
+  vW = wp.xyz;
+  vN = normalize(mat3(modelMatrix) * mat3(im) * normal);
+  vC = col;
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}
+`
+), UBER_FS = (
+  /* glsl */
+  `
+varying vec3 vW; varying vec3 vN; varying vec3 vC;
+void main(){
+  vec3 N = normalize(vN);
+#ifndef NOFLIP
+  N = gl_FrontFacing ? N : -N;
+#endif
+  float r = revealAt(vW);
+#ifdef ALWAYS
+  r = 1.0;
+#endif
+  vec3 V = normalize(cameraPosition - vW);
+  vec3 cc = painted(vC, N, V, vW);
+  vec3 sk = sketched(vC, N, vW);
+  gl_FragColor = vec4(finish(sk, cc, r, vW), 1.0);
+}
+`
+);
+function uberMat(opt = {}) {
+  let defines = {};
+  for (let k of ["always", "wind", "blossom", "cloak", "flower", "noflip", "foliage", "grass"]) opt[k] && (defines[k.toUpperCase()] = 1);
+  return new THREE.ShaderMaterial({
+    defines,
+    side: opt.side ?? THREE.FrontSide,
+    uniforms: { ...U, uWind: { value: opt.wind || 0 }, uCloak: { value: new THREE.Vector4() }, uCloakY: { value: new THREE.Vector2(1.02, 0.45) } },
+    vertexShader: NOISE + COMMON + UBER_VS,
+    fragmentShader: NOISE + COMMON + FRAG + UBER_FS
+  });
+}
+var SIMPLE_VS = (
+  /* glsl */
+  `
+varying vec3 vW; varying vec3 vN;
+void main(){
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vW = wp.xyz; vN = normalize(mat3(modelMatrix) * normal);
+  gl_Position = projectionMatrix * viewMatrix * wp;
+}
+`
+), PATHFN = (
+  /* glsl */
+  `
+float pathX(float z){ return sin(z * 0.08) * 2.6 + sin(z * 0.21 + 1.3) * 0.7; }
+float streamZ(float x){ return sin(x * 0.12) * 1.8 + sin(x * 0.31 + 2.0) * 0.5; }
+`
+), GROUND_FS = (
+  /* glsl */
+  `
+uniform vec4 uGirl; uniform float uBloom; uniform vec3 uTree;
+varying vec3 vW; varying vec3 vN;
+void main(){
+  vec3 N = normalize(vN); vec3 w = vW;
+  float n1 = fbm(w.xz * 0.25), n2 = fbm(w.xz * 1.7 + 3.1);
+  float dpRaw = abs(w.x - pathX(w.z));
+  float dp = dpRaw + (n2 - 0.5) * 0.5;
+  float onPath = 1.0 - smoothstep(0.9, 1.25, dp);
+  float dsRaw = abs(w.z - streamZ(w.x));
+  float ds = dsRaw + (n2 - 0.5) * 0.4;
+  float bank = 1.0 - smoothstep(1.7, 2.7, ds);
+  vec3 grass = mix(vec3(0.29, 0.49, 0.21), vec3(0.56, 0.70, 0.30), n1);
+  grass = mix(grass, vec3(0.40, 0.58, 0.24), n2 * 0.4);
+  vec3 dirt = mix(vec3(0.78, 0.63, 0.42), vec3(0.64, 0.50, 0.33), n2);
+  vec3 mud = mix(vec3(0.46, 0.41, 0.31), vec3(0.66, 0.61, 0.48), n2);
+  vec3 base = mix(grass, dirt, onPath);
+  base = mix(base, mud, bank);
+  float dt = length(w.xz - uTree.xz);
+  float pet = smoothstep(0.6, 0.68, vnoise(w.xz * 7.0)) * (1.0 - smoothstep(3.5, 8.5, dt + (n1 - 0.5) * 3.0)) * smoothstep(0.35, 1.0, uBloom);
+  base = mix(base, vec3(0.98, 0.76, 0.82), pet * 0.9);
+  float dap = smoothstep(0.42, 0.62, fbm(w.xz * 0.32 + vec2(uTime * 0.03, 0.0)));
+  float gs = (1.0 - smoothstep(0.1, 0.48, length(w.xz - uGirl.xy))) * (1.0 - smoothstep(0.0, 1.0, uGirl.z));
+
+  float r = revealAt(w);
+  vec3 V = normalize(cameraPosition - w);
+  vec3 cc = painted(base, N, V, w) * (0.8 + 0.3 * dap) * (1.0 - gs * 0.4);
+
+  // \u7EBF\u7A3F\uFF1A\u8349\u5730\u77ED\u7B14\u89E6 + \u8DEF\u6CBF\u3001\u5CB8\u7EBF
+  float grassZone = (1.0 - onPath) * (1.0 - bank);
+  float sc = dot(w.xz, vec2(0.8, 0.6)) * 4.0 + vnoise(w.xz * 1.5) * 1.5;
+  float dash = smoothstep(0.55, 0.78, vnoise(vec2(dot(w.xz, vec2(-0.6, 0.8)) * 2.2, floor(sc))));
+  float strokes = hline(sc, 0.16) * dash * grassZone * 0.7;
+  float edgeW = 0.035 + fwidth(dp) * 0.8;
+  float border = 1.0 - smoothstep(edgeW * 0.4, edgeW, abs(dp - 1.1));
+  border = max(border, 1.0 - smoothstep(edgeW * 0.4, edgeW, abs(ds - 2.15)));
+  border *= 0.65 + 0.35 * vnoise(w.xz * 3.0);
+  float pebble = smoothstep(0.86, 0.9, vnoise(w.xz * 9.0)) * onPath * 0.5;
+  vec3 sk = uPaper * (1.0 - max(max(strokes, border * 0.8), pebble) * 0.55) * (1.0 - gs * 0.22);
+  sk = mix(sk, sketched(base, N, w), 0.25);
+
+  gl_FragColor = vec4(finish(sk, cc, r, w), 1.0);
+}
+`
+);
+function groundMat() {
+  return new THREE.ShaderMaterial({
+    uniforms: { ...U },
+    vertexShader: SIMPLE_VS,
+    fragmentShader: NOISE + COMMON + FRAG + PATHFN + GROUND_FS
+  });
+}
+var WATER_FS = (
+  /* glsl */
+  `
+uniform vec3 uStones[7];
+varying vec3 vW; varying vec3 vN;
+void main(){
+  vec3 w = vW;
+  float across = abs(w.z - streamZ(w.x));
+  float t = uTime;
+  float n = vnoise(vec2(w.x * 0.9 - t * 1.4, w.z * 3.5));
+  float n2 = vnoise(vec2(w.x * 2.3 - t * 2.2, w.z * 7.0 + 3.0));
+  float foam = 0.0, ring = 0.0;
+  for (int i = 0; i < 7; i++){
+    vec2 d = w.xz - uStones[i].xz;
+    float L = length(d * vec2(0.85, 1.0)) - uStones[i].y;
+    foam = max(foam, 1.0 - smoothstep(0.0, 0.16 + 0.12 * n2, L));
+    float wake = (1.0 - smoothstep(0.0, 1.4, L)) * smoothstep(0.62, 0.78, vnoise(vec2(d.x * 3.0 - t * 2.5, d.y * 6.0)));
+    foam = max(foam, wake * step(0.0, d.x) * 0.8);
+    ring = max(ring, (1.0 - smoothstep(0.0, 0.035, abs(L - 0.12 - 0.05 * sin(t * 2.0 + float(i)))))*(1.0 - smoothstep(0.0, 0.5, L)));
+  }
+  float r = revealAt(w);
+  vec3 deep = vec3(0.16, 0.42, 0.62), shallow = vec3(0.44, 0.73, 0.78);
+  vec3 cc = mix(shallow, deep, smoothstep(2.0, 0.2, across));
+  cc = mix(cc, vec3(0.64, 0.86, 0.92), smoothstep(0.55, 0.85, n) * 0.45);
+  cc += vec3(1.0) * smoothstep(0.84, 0.92, n2) * 0.35;
+  vec3 V = normalize(cameraPosition - w);
+  cc = mix(cc, vec3(0.78, 0.89, 0.95), pow(1.0 - max(V.y, 0.0), 3.0) * 0.35);
+  cc = mix(cc, vec3(0.96, 0.98, 1.0), foam * 0.85);
+
+  float c1 = w.z * 5.0 + sin(w.x * 0.7 - t * 0.9) * 0.4 + n * 0.6;
+  float dash = smoothstep(0.45, 0.62, vnoise(vec2(w.x * 1.2 - t * 1.3, floor(c1))));
+  float ln = hline(c1, 0.12) * dash;
+  vec3 sk = uPaper * (1.0 - max(ln * 0.45, ring * 0.5));
+
+  gl_FragColor = vec4(finish(sk, cc, r, w), 1.0);
+}
+`
+);
+function waterMat(stones) {
+  let arr = stones.map((s) => new THREE.Vector3(s.x, s.r, s.z));
+  for (; arr.length < 7; ) arr.push(new THREE.Vector3(999, 0, 999));
+  return new THREE.ShaderMaterial({
+    uniforms: { ...U, uStones: { value: arr } },
+    vertexShader: SIMPLE_VS,
+    fragmentShader: NOISE + COMMON + FRAG + PATHFN + WATER_FS
+  });
+}
+var SKY_FS = (
+  /* glsl */
+  `
+uniform float uSky;
+varying vec3 vW;
+void main(){
+  vec3 d = normalize(vW - cameraPosition);
+  float h = d.y;
+  vec3 top = vec3(0.27, 0.53, 0.85), hor = vec3(0.80, 0.90, 0.92);
+  vec3 sky = mix(hor, top, pow(clamp(h, 0.0, 1.0), 0.55));
+  vec2 cp = d.xz / (max(h, 0.0) + 0.12) * 0.9 + vec2(uTime * 0.012, 0.0);
+  float c = fbm(cp * 0.55) * 0.75 + fbm(cp * 1.7 + 4.0) * 0.25;
+  vec2 cs = cp + uSunDir.xz * 0.18;
+  float c2 = fbm(cs * 0.55) * 0.75 + fbm(cs * 1.7 + 4.0) * 0.25;
+  float hm = smoothstep(0.0, 0.18, h);
+  float cloud = smoothstep(0.46, 0.6, c) * hm;
+  float shade = clamp((c - c2) * 5.0 + 0.6, 0.0, 1.0);
+  vec3 cloudCol = mix(vec3(0.72, 0.73, 0.87), vec3(1.0, 0.98, 0.94), shade);
+  vec3 cc = mix(sky, cloudCol, cloud);
+  cc += vec3(1.0, 0.92, 0.75) * pow(max(dot(d, uSunDir), 0.0), 8.0) * 0.25;
+
+  float aa = fwidth(c);
+  float ln = 1.0 - smoothstep(aa * 0.6, aa * 1.8, abs(c - 0.5));
+  float ln2 = 1.0 - smoothstep(aa * 0.6, aa * 1.5, abs(c - 0.58));
+  vec3 sk = uPaper * (1.0 - (ln * 0.4 + ln2 * 0.18) * hm);
+
+  float rn = fbm(d.xz * 2.5 + h * 3.0);
+  float r = smoothstep(0.0, 0.2, uSky * 1.5 - h * 0.9 - (rn - 0.5) * 0.35 - 0.1);
+  gl_FragColor = vec4(mix(sk, cc, r), 1.0);
+}
+`
+);
+function skyMat() {
+  return new THREE.ShaderMaterial({
+    uniforms: { ...U },
+    vertexShader: "varying vec3 vW; void main(){ vec4 wp = modelMatrix * vec4(position, 1.0); vW = wp.xyz; gl_Position = projectionMatrix * viewMatrix * wp; }",
+    fragmentShader: NOISE + COMMON + SKY_FS,
+    side: THREE.BackSide,
+    depthWrite: !1
+  });
+}
+
+// js/fx.js
+import * as THREE2 from "three";
+
+// js/terrain.js
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = a + 1831565813 | 0;
+    let t2 = Math.imul(a ^ a >>> 15, 1 | a);
+    return t2 = t2 + Math.imul(t2 ^ t2 >>> 7, 61 | t2) ^ t2, ((t2 ^ t2 >>> 14) >>> 0) / 4294967296;
+  };
+}
+var fr = (v) => v - Math.floor(v), h2 = (x, y) => fr(Math.sin(x * 127.1 + y * 311.7) * 43758.5453), h3 = (x, y, z) => fr(Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453), sm = (t2) => t2 * t2 * (3 - 2 * t2);
+function noise2(x, y) {
+  let ix = Math.floor(x), iy = Math.floor(y), ux = sm(x - ix), uy = sm(y - iy), a = h2(ix, iy), b = h2(ix + 1, iy), c = h2(ix, iy + 1), d = h2(ix + 1, iy + 1);
+  return (a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy) * 2 - 1;
+}
+function noise3(x, y, z) {
+  let ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z), ux = sm(x - ix), uy = sm(y - iy), uz = sm(z - iz), l = (a, b, t2) => a + (b - a) * t2, z0 = l(l(h3(ix, iy, iz), h3(ix + 1, iy, iz), ux), l(h3(ix, iy + 1, iz), h3(ix + 1, iy + 1, iz), ux), uy), z1 = l(l(h3(ix, iy, iz + 1), h3(ix + 1, iy, iz + 1), ux), l(h3(ix, iy + 1, iz + 1), h3(ix + 1, iy + 1, iz + 1), ux), uy);
+  return l(z0, z1, uz) * 2 - 1;
+}
+var smoothstep = (a, b, x) => {
+  let t2 = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t2 * t2 * (3 - 2 * t2);
+}, pathX = (z) => Math.sin(z * 0.08) * 2.6 + Math.sin(z * 0.21 + 1.3) * 0.7, streamZ = (x) => Math.sin(x * 0.12) * 1.8 + Math.sin(x * 0.31 + 2) * 0.5, WATER_Y = -0.35, TREE = { x: pathX(-27.5), z: -27.5 };
+function terrainH(x, z) {
+  let h = noise2(x * 0.045, z * 0.045) * 1.4 + noise2(x * 0.12 + 5.2, z * 0.12 - 3.1) * 0.35, dp = Math.abs(x - pathX(z));
+  h *= 0.35 + 0.65 * smoothstep(1.5, 7, dp), h += smoothstep(14, 42, dp) * 4.5;
+  let ds = Math.abs(z - streamZ(x));
+  h += (Math.max(h, -0.1) - h) * (1 - smoothstep(4, 7.5, ds));
+  let c = 1 - smoothstep(1.4, 3.2, ds);
+  h = h * (1 - c * 0.8) - c * 0.75;
+  let dx = x - TREE.x, dz = z - TREE.z;
+  return h += 0.8 * Math.exp(-(dx * dx + dz * dz) / 45), h;
+}
+function crossing() {
+  let z = 0;
+  for (let i = 0; i < 10; i++) z = streamZ(pathX(z));
+  return { x: pathX(z), z };
+}
+
+// js/fx.js
+var PETAL_VS = (
+  /* glsl */
+  `
+attribute vec4 aSeed;
+uniform float uPetalT;
+uniform vec3 uTree;
+uniform float uGroundMin;
+varying vec3 vW; varying vec3 vN; varying vec3 vC; varying float vA;
+mat3 rotAxis(vec3 a, float ang){
+  float s = sin(ang), c = cos(ang), oc = 1.0 - c;
+  return mat3(oc*a.x*a.x + c, oc*a.x*a.y + a.z*s, oc*a.z*a.x - a.y*s,
+              oc*a.x*a.y - a.z*s, oc*a.y*a.y + c, oc*a.y*a.z + a.x*s,
+              oc*a.z*a.x + a.y*s, oc*a.y*a.z - a.x*s, oc*a.z*a.z + c);
+}
+void main(){
+  float life = 8.0 + aSeed.w * 5.0;
+  float t = uPetalT - aSeed.x * 6.0;
+  float alive = step(0.0, t);
+  float age = mod(max(t, 0.0), life);
+  float ang = aSeed.y * 6.2831;
+  float rad = sqrt(aSeed.z) * 5.8;
+  vec3 pos = uTree + vec3(cos(ang) * rad, 4.2 + fract(aSeed.y * 13.7) * 4.2, sin(ang) * rad * 0.85);
+  pos.y -= age * 0.72;
+  pos.x += age * 0.32 + sin(age * 1.6 + aSeed.y * 30.0) * 0.6;
+  pos.z += age * 0.62 + cos(age * 1.1 + aSeed.z * 20.0) * 0.5;
+  float spin = age * (2.0 + aSeed.w * 3.0) + aSeed.x * 10.0;
+  vec3 axis = normalize(vec3(sin(aSeed.y * 40.0), 0.6, cos(aSeed.z * 40.0)));
+  mat3 R = rotAxis(axis, spin);
+  float fade = smoothstep(0.0, 0.5, age) * (1.0 - smoothstep(life - 1.2, life, age)) * alive;
+  fade *= smoothstep(uGroundMin - 0.2, uGroundMin + 0.4, pos.y);
+  vec3 wp = pos + R * (position * (0.75 + aSeed.w * 0.5) * fade);
+  vW = wp; vN = R * vec3(0.0, 0.0, 1.0);
+  vC = mix(vec3(0.96, 0.62, 0.74), vec3(1.0, 0.88, 0.92), aSeed.w);
+  vA = fade;
+  gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0);
+}
+`
+), PETAL_FS = (
+  /* glsl */
+  `
+varying vec3 vW; varying vec3 vN; varying vec3 vC; varying float vA;
+void main(){
+  if (vA < 0.02) discard;
+  vec3 N = normalize(vN);
+  float l = 0.72 + 0.28 * abs(dot(N, uSunDir));
+  vec3 c = vC * l + vec3(0.06, 0.03, 0.03);
+  float d = length(vW - cameraPosition);
+  float f = (1.0 - exp(-max(d - 14.0, 0.0) * 0.024)) * 0.9;
+  gl_FragColor = vec4(mix(c, uHaze, f), 1.0);
+}
+`
+);
+function makePetals(count = 900) {
+  let s = new THREE2.Shape();
+  s.moveTo(0, 0), s.bezierCurveTo(0.05, 0.02, 0.065, 0.075, 0.022, 0.105), s.lineTo(0, 0.09), s.lineTo(-0.022, 0.105), s.bezierCurveTo(-0.065, 0.075, -0.05, 0.02, 0, 0);
+  let g = new THREE2.ShapeGeometry(s, 4);
+  g.translate(0, -0.052, 0);
+  let p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) p.setZ(i, p.getX(i) * p.getX(i) * 6);
+  g.computeVertexNormals();
+  let seeds = new Float32Array(count * 4), R = rng(9);
+  for (let i = 0; i < seeds.length; i++) seeds[i] = R();
+  g.setAttribute("aSeed", new THREE2.InstancedBufferAttribute(seeds, 4));
+  let m = new THREE2.ShaderMaterial({
+    uniforms: { ...U },
+    vertexShader: NOISE + COMMON + PETAL_VS,
+    fragmentShader: NOISE + COMMON + PETAL_FS,
+    side: THREE2.DoubleSide,
+    depthWrite: !1
+    // 不写深度：后期描边不会给每片花瓣描黑边
+  }), mesh = new THREE2.InstancedMesh(g, m, count);
+  return mesh.renderOrder = 5, mesh.frustumCulled = !1, mesh;
+}
+var POST_FS = (
+  /* glsl */
+  `
+uniform sampler2D tColor; uniform sampler2D tDepth;
+uniform vec2 uRes; uniform float uNear, uFar, uTime, uWarm, uPx;
+varying vec2 vUv;
+float lin(vec2 uv){ float z = texture2D(tDepth, uv).x; return uNear * uFar / (uFar - z * (uFar - uNear)); }
+float edge(vec2 uv, float px){
+  vec2 o = px / uRes;
+  float c = lin(uv);
+  float l = lin(uv - vec2(o.x, 0.0)), r = lin(uv + vec2(o.x, 0.0));
+  float d = lin(uv - vec2(0.0, o.y)), u = lin(uv + vec2(0.0, o.y));
+  float lap = abs(l + r + d + u - 4.0 * c) / c;
+  return smoothstep(0.03, 0.10, lap);
+}
+void main(){
+  vec2 px = 1.0 / uRes;
+  float boil = floor(uTime * 4.0);
+  vec2 q = vUv * uRes / (28.0 * uPx);
+  vec2 wob = (vec2(vnoise(q + boil * 7.1), vnoise(q + 13.7 + boil * 3.3)) - 0.5) * 2.4 * uPx * px;
+  vec2 q2 = q * 1.7 + 31.0;
+  vec2 wob2 = (vec2(vnoise(q2 + boil), vnoise(q2 + 26.0 - boil)) - 0.5) * 3.4 * uPx * px;
+  float e = max(edge(vUv + wob, 1.0 * uPx), edge(vUv + wob2, 1.6 * uPx) * 0.5);
+  e *= 0.6 + 0.4 * vnoise(vUv * uRes / (14.0 * uPx) + 3.0);
+  float dc = lin(vUv);
+  e *= 1.0 - smoothstep(28.0, 110.0, dc) * 0.8;
+
+  vec3 col = texture2D(tColor, vUv).rgb;
+  vec3 lineCol = col * vec3(0.30, 0.29, 0.33);
+  col = mix(col, lineCol, clamp(e, 0.0, 1.0) * 0.9);
+
+  float asp = uRes.x / uRes.y;
+  float g = hash12(gl_FragCoord.xy);
+  float fib = vnoise(gl_FragCoord.xy * vec2(0.09, 0.35) / uPx);
+  float mott = fbm(vUv * vec2(asp, 1.0) * 3.0);
+  col *= 0.955 + 0.045 * g;
+  col *= 0.975 + 0.04 * fib;
+  col *= 0.965 + 0.05 * mott;
+  vec2 sp = (vUv - vec2(0.12, 1.08)) * vec2(asp, 1.0);
+  col += vec3(1.0, 0.86, 0.62) * uWarm * 0.12 * smoothstep(1.2, 0.0, length(sp));
+  float vg = length((vUv - 0.5) * vec2(asp, 1.0));
+  col *= mix(1.0, 0.84, smoothstep(0.45, 1.1, vg));
+  gl_FragColor = vec4(col, 1.0);
+}
+`
+);
+function postMat() {
+  return new THREE2.ShaderMaterial({
+    uniforms: {
+      tColor: { value: null },
+      tDepth: { value: null },
+      uRes: { value: new THREE2.Vector2(1, 1) },
+      uNear: { value: 0.3 },
+      uFar: { value: 700 },
+      uTime: { value: 0 },
+      uWarm: { value: 0 },
+      uPx: { value: 1 }
+    },
+    vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }",
+    fragmentShader: NOISE + POST_FS,
+    depthTest: !1,
+    depthWrite: !1
+  });
+}
+
+// js/world.js
+import * as THREE5 from "three";
+
+// js/geo.js
+import * as THREE3 from "three";
+import { mergeGeometries, mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
+var V3 = (x = 0, y = 0, z = 0) => new THREE3.Vector3(x, y, z), col = (r, g, b) => new THREE3.Color(r, g, b);
+function finalize(geo, color, tint = 0) {
+  geo.index && (geo = geo.toNonIndexed()), geo.attributes.uv && geo.deleteAttribute("uv"), geo.attributes.normal || geo.computeVertexNormals();
+  let p = geo.attributes.position, n = geo.attributes.normal, cols = new Float32Array(p.count * 3), v = new THREE3.Vector3(), nn = new THREE3.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    let c = color;
+    typeof color == "function" && (v.fromBufferAttribute(p, i), nn.fromBufferAttribute(n, i), c = color(v, nn)), cols[i * 3] = c.r, cols[i * 3 + 1] = c.g, cols[i * 3 + 2] = c.b;
+  }
+  return geo.setAttribute("aCol", new THREE3.BufferAttribute(cols, 3)), geo.setAttribute("aTint", new THREE3.BufferAttribute(new Float32Array(p.count).fill(tint), 1)), geo;
+}
+function lumpy(r, detail, seed, amp = 0.22, flatBottom = 0.72) {
+  let g = new THREE3.IcosahedronGeometry(r, detail);
+  g.deleteAttribute("normal"), g.deleteAttribute("uv"), g = mergeVertices(g);
+  let p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    let x = p.getX(i), y = p.getY(i), z = p.getZ(i), k = 1.4 / r, s = 1 + (noise3(x * k + seed, y * k, z * k - seed) * 0.75 + noise3(x * k * 2.3 - seed, y * k * 2.3, z * k * 2.3) * 0.25) * amp;
+    p.setXYZ(i, x * s, (y < 0 ? y * flatBottom : y) * s, z * s);
+  }
+  return g.computeVertexNormals(), g;
+}
+function limb(a, b, r0, r1, seg = 7) {
+  let dir = new THREE3.Vector3().subVectors(b, a), len = dir.length(), g = new THREE3.CylinderGeometry(r1, r0, len, seg, 3, !0);
+  return g.translate(0, len / 2, 0), g.applyQuaternion(new THREE3.Quaternion().setFromUnitVectors(V3(0, 1, 0), dir.normalize())), g.translate(a.x, a.y, a.z), g;
+}
+function fluffNormals(geo, center, k = 0.45) {
+  let p = geo.attributes.position, n = geo.attributes.normal, v = new THREE3.Vector3(), nn = new THREE3.Vector3();
+  for (let i = 0; i < p.count; i++)
+    v.fromBufferAttribute(p, i).sub(center).normalize(), nn.fromBufferAttribute(n, i).multiplyScalar(1 - k).addScaledVector(v, k).normalize(), n.setXYZ(i, nn.x, nn.y, nn.z);
+  return geo;
+}
+function placeInstances(mesh, items, colorOf) {
+  let m = new THREE3.Matrix4(), q = new THREE3.Quaternion(), s = new THREE3.Vector3(), e = new THREE3.Euler();
+  return items.forEach((it, i) => {
+    e.set(it.tx || 0, it.ry || 0, it.tz || 0), q.setFromEuler(e), s.set(it.s * (it.sx || 1), it.s * (it.sy || 1), it.s * (it.sz || 1)), m.compose(V3(it.x, it.y, it.z), q, s), mesh.setMatrixAt(i, m), colorOf && mesh.setColorAt(i, colorOf(it, i));
+  }), mesh.instanceMatrix.needsUpdate = !0, mesh.instanceColor && (mesh.instanceColor.needsUpdate = !0), mesh;
+}
+
+// js/trees.js
+import * as THREE4 from "three";
+var mixC = (a, b, t2) => a.clone().lerp(b, t2);
+function treeGeo(kind, seed) {
+  let R = rng(seed), trunk = [], blobs = [], center;
+  if (kind === "bush") {
+    center = V3(0, 0.55, 0);
+    let n = 3 + Math.floor(R() * 3);
+    for (let k = 0; k < n; k++) {
+      let a = R() * 6.28, d = R() * 0.6, r = 0.5 + R() * 0.45, g = lumpy(r, 2, seed * 7 + k * 3.1, 0.25);
+      g.translate(Math.cos(a) * d, r * 0.75 + R() * 0.2, Math.sin(a) * d), blobs.push(g);
+    }
+  } else {
+    let tall = kind === "tall", th = tall ? 5.2 + R() * 1.2 : 2.8 + R() * 0.8, lx = (R() - 0.5) * 0.5, lz = (R() - 0.5) * 0.5, mid = V3(lx * 0.5, th * 0.5, lz * 0.5), top = V3(lx, th, lz);
+    trunk.push(limb(V3(0, -0.4, 0), mid, tall ? 0.34 : 0.3, tall ? 0.26 : 0.22), limb(mid, top, tall ? 0.26 : 0.22, 0.15));
+    let cr = tall ? 2 : 2.3;
+    center = V3(top.x, th + cr * 0.55, top.z);
+    for (let k = 0; k < 3; k++) {
+      let a = R() * 6.28 + k * 2.1, end = V3(top.x + Math.cos(a) * cr * 0.6, th + 0.7 + R() * 0.8, top.z + Math.sin(a) * cr * 0.6);
+      trunk.push(limb(top.clone().add(V3(0, -0.3, 0)), end, 0.12, 0.05, 5));
+    }
+    let n = tall ? 9 : 8;
+    for (let k = 0; k < n; k++) {
+      let a = R() * 6.28, d = Math.sqrt(R()) * cr * 0.75, y = center.y + (R() - 0.35) * cr * (tall ? 1.1 : 0.8), g2 = lumpy(cr * (0.42 + R() * 0.25), 2, seed * 5 + k * 1.7, 0.24);
+      g2.translate(center.x + Math.cos(a) * d, y, center.z + Math.sin(a) * d), blobs.push(g2);
+    }
+    let g = lumpy(cr * 0.6, 2, seed + 99, 0.2);
+    g.translate(center.x, center.y + cr * 0.45, center.z), blobs.push(g);
+  }
+  let cg = fluffNormals(mergeGeometries(blobs), center, 0.45);
+  cg.computeBoundingBox();
+  let y0 = cg.boundingBox.min.y, y1 = cg.boundingBox.max.y, dark = kind === "bush" ? col(0.22, 0.4, 0.17) : col(0.15, 0.31, 0.16), light = kind === "bush" ? col(0.56, 0.7, 0.3) : col(0.45, 0.64, 0.27), canopy = finalize(cg, (v) => mixC(dark, light, Math.pow(smoothstep(y0, y1, v.y), 0.8)), 1);
+  if (!trunk.length) return canopy;
+  let tg = finalize(mergeGeometries(trunk), (v) => mixC(col(0.26, 0.19, 0.15), col(0.46, 0.35, 0.25), smoothstep(-0.4, 3, v.y)), 0);
+  return mergeGeometries([tg, canopy]);
+}
+function buildForest(scene2) {
+  let R = rng(11), pts = [], far = (x, z, d) => pts.every((p) => (p.x - x) ** 2 + (p.z - z) ** 2 >= d * d);
+  for (let i = 0; i < 9e3 && pts.length < 230; i++) {
+    let z = -72 + R() * 114, off = (R() < 0.5 ? -1 : 1) * (4.4 + Math.pow(R(), 1.3) * 40), x = pathX(z) + off;
+    x < -50 || x > 50 || Math.abs(off) < (z > 18 ? 7.5 : 4.4) || Math.abs(z - streamZ(x)) < 3.7 || Math.hypot(x - TREE.x, z - TREE.z) < 11 || far(x, z, 3.3) && pts.push({ x, z, kind: R() < 0.3 ? "tall" : "round", v: R() < 0.5 ? 0 : 1, s: 0.85 + R() * 0.55, ry: R() * 6.28 });
+  }
+  let C = crossing();
+  for (let i = 0; i < 5e3; i++) {
+    let z = -45 + R() * 80, off = (R() < 0.5 ? -1 : 1) * (5 + Math.pow(R(), 1.6) * 16), x = pathX(z) + off;
+    if (!(Math.abs(z - streamZ(x)) < 3 || Math.hypot(x - TREE.x, z - TREE.z) < 10.5) && !(z > 19 && Math.abs(off) < 7) && !(x > C.x && x < C.x + 10 && z > C.z - 5 && z < C.z + 8) && far(x, z, 1.6) && (pts.push({ x, z, kind: "bush", v: R() < 0.5 ? 0 : 1, s: 0.7 + R() * 0.7, ry: R() * 6.28 }), pts.filter((p) => p.kind === "bush").length >= 150))
+      break;
+  }
+  let treeMat = uberMat({ wind: 4e-3, foliage: !0 }), bushMat = uberMat({ wind: 0.02, foliage: !0 });
+  for (let kind of ["round", "tall", "bush"])
+    for (let v of [0, 1]) {
+      let items = pts.filter((p) => p.kind === kind && p.v === v);
+      if (!items.length) continue;
+      items.forEach((p) => {
+        p.y = terrainH(p.x, p.z) - 0.05, p.sy = 0.92 + R() * 0.2;
+      });
+      let geo = treeGeo(kind, 100 + v * 17 + kind.length * 5), mesh = new THREE4.InstancedMesh(geo, kind === "bush" ? bushMat : treeMat, items.length);
+      placeInstances(mesh, items, () => R() < 0.12 ? col(1.22, 1.1, 0.72) : col(1 + (R() - 0.5) * 0.25, 1 + (R() - 0.5) * 0.18, 1 + (R() - 0.5) * 0.3)), mesh.frustumCulled = !1, scene2.add(mesh);
+    }
+  return pts.map((p) => ({ x: p.x, z: p.z, r: p.kind === "bush" ? 0.8 * p.s : (p.kind === "tall" ? 0.36 : 0.32) * p.s, h: p.kind === "bush" ? 1.6 * p.s : 9 }));
+}
+function buildBlossomTree(scene2) {
+  let R = rng(5), base = V3(TREE.x, terrainH(TREE.x, TREE.z) - 0.1, TREE.z), segs = [], clumps = [];
+  function grow(a, dir, len, rad, depth) {
+    let b = a.clone().addScaledVector(dir, len), mid = a.clone().lerp(b, 0.5).add(V3((R() - 0.5) * len * 0.15, (R() - 0.3) * len * 0.1, (R() - 0.5) * len * 0.15));
+    if (segs.push(limb(a, mid, rad, rad * 0.86, 8), limb(mid, b, rad * 0.86, rad * 0.72, 8)), depth === 0) {
+      clumps.push({ p: b, r: 0.95 + R() * 0.45 }), clumps.push({ p: b.clone().add(V3((R() - 0.5) * 1.4, (R() - 0.2) * 0.8, (R() - 0.5) * 1.4)), r: 0.7 + R() * 0.4 });
+      return;
+    }
+    depth <= 1 && clumps.push({ p: mid.clone().add(V3(0, 0.25, 0)), r: 0.7 + R() * 0.35 });
+    let n = depth >= 3 ? 3 : 2 + (R() < 0.4 ? 1 : 0), ph = R() * 6.28;
+    for (let k = 0; k < n; k++) {
+      let a2 = ph + k * 6.28 / n + (R() - 0.5) * 0.6, nd = dir.clone().multiplyScalar(0.6).addScaledVector(V3(Math.cos(a2), 0, Math.sin(a2)), depth >= 3 ? 0.85 : 0.6).add(V3(0, depth >= 3 ? 0.25 : 0.35, 0)).normalize();
+      grow(b, nd, len * (0.72 + R() * 0.12), rad * 0.66, depth - 1);
+    }
+  }
+  grow(base, V3(0.05, 1, 0.02).normalize(), 3, 0.5, 4);
+  let trunkGeo = finalize(mergeGeometries(segs), (v) => mixC(col(0.3, 0.21, 0.19), col(0.5, 0.38, 0.32), smoothstep(base.y, base.y + 7, v.y)), 0), trunk = new THREE4.Mesh(trunkGeo, uberMat());
+  scene2.add(trunk);
+  let cg = finalize(lumpy(1, 3, 3.3, 0.28), (v) => mixC(col(0.8, 0.7, 0.78), col(1, 1, 1), smoothstep(-1, 0.8, v.y)), 1), mesh = new THREE4.InstancedMesh(cg, uberMat({ blossom: !0 }), clumps.length), pinks = [col(1, 0.76, 0.83), col(0.98, 0.69, 0.79), col(1, 0.84, 0.88), col(0.99, 0.79, 0.85), col(1, 0.91, 0.93)];
+  return placeInstances(mesh, clumps.map((c) => ({ x: c.p.x, y: c.p.y, z: c.p.z, s: c.r, sy: 0.8, ry: R() * 6.28 })), () => pinks[Math.floor(R() * pinks.length)]), mesh.frustumCulled = !1, scene2.add(mesh), { base };
+}
+
+// js/world.js
+function bladeGeo() {
+  let pos = [], cols = [], base = col(0.2, 0.36, 0.15), tip = col(0.62, 0.76, 0.33), row = (i) => {
+    let t2 = i / 4, w = 0.05 * (1 - t2 * 0.92);
+    return [[-w, t2, t2 * t2 * 0.22], [w, t2, t2 * t2 * 0.22], t2];
+  };
+  for (let i = 0; i < 4; i++) {
+    let [a0, b0, t0] = row(i), [a1, b1, t1] = row(i + 1);
+    for (let [v, t2] of [[a0, t0], [b0, t0], [a1, t1], [b0, t0], [b1, t1], [a1, t1]]) {
+      pos.push(...v);
+      let c = base.clone().lerp(tip, t2);
+      cols.push(c.r, c.g, c.b);
+    }
+  }
+  let g = new THREE5.BufferGeometry();
+  g.setAttribute("position", new THREE5.Float32BufferAttribute(pos, 3));
+  let n = new THREE5.Vector3(0, 1, 0.35).normalize();
+  return g.setAttribute("normal", new THREE5.Float32BufferAttribute(new Array(pos.length / 3).fill(0).flatMap(() => [n.x, n.y, n.z]), 3)), g.setAttribute("aCol", new THREE5.Float32BufferAttribute(cols, 3)), g.setAttribute("aTint", new THREE5.Float32BufferAttribute(new Array(pos.length / 3).fill(1), 1)), g;
+}
+function flowerGeo() {
+  let green = col(0.28, 0.48, 0.2), parts = [finalize(limb(V3(0, 0, 0), V3(0.01, 0.27, 0), 7e-3, 5e-3, 4), green, 0)], leaf = new THREE5.SphereGeometry(0.045, 6, 4);
+  leaf.scale(1, 0.18, 0.4), leaf.rotateZ(0.5), leaf.translate(0.035, 0.07, 0), parts.push(finalize(leaf, green, 0));
+  for (let k = 0; k < 5; k++) {
+    let pg = new THREE5.CircleGeometry(0.034, 7);
+    pg.scale(0.62, 1, 1), pg.translate(0, 0.03, 0), pg.rotateX(-Math.PI / 2 + 0.35), pg.rotateY(k * Math.PI * 2 / 5), pg.translate(0.01, 0.275, 0), parts.push(finalize(pg, col(1, 1, 1), 1));
+  }
+  let c = new THREE5.SphereGeometry(0.014, 6, 4);
+  return c.translate(0.01, 0.285, 0), parts.push(finalize(c, col(0.98, 0.84, 0.32), 0)), mergeGeometries(parts);
+}
+function buildWorld(scene2) {
+  let R = rng(3), C = crossing(), sky = new THREE5.Mesh(new THREE5.SphereGeometry(320, 32, 16), skyMat());
+  sky.renderOrder = -10, sky.frustumCulled = !1, scene2.add(sky);
+  let gg = new THREE5.PlaneGeometry(120, 125, 240, 250);
+  gg.rotateX(-Math.PI / 2), gg.translate(0, 0, -15);
+  let gp = gg.attributes.position;
+  for (let i = 0; i < gp.count; i++) gp.setY(i, terrainH(gp.getX(i), gp.getZ(i)));
+  gg.computeVertexNormals(), scene2.add(new THREE5.Mesh(gg, groundMat()));
+  let stones = [];
+  for (let k = 0; k < 6; k++) {
+    let z = C.z + 1.95 - k * 0.78, r = 0.34 + R() * 0.08;
+    stones.push({ x: pathX(z) + (R() - 0.5) * 0.25, z, r, y: -0.5, sy: 0.5, top: -0.5 + 0.5 * 0.98 });
+  }
+  let rocks = stones.map((s) => ({ x: s.x, y: s.y, z: s.z, s: s.r / 0.92, sy: s.sy / (s.r / 0.92), sz: 0.9, ry: R() * 6 }));
+  for (let i = 0; i < 300 && rocks.length < 40; i++) {
+    let x = C.x + (R() - 0.5) * 50, z = streamZ(x) + (R() < 0.5 ? -1 : 1) * (1.9 + R() * 1);
+    if (Math.abs(x - pathX(z)) < 1.6) continue;
+    let s = 0.15 + R() * 0.3;
+    rocks.push({ x, y: terrainH(x, z) - s * 0.2, z, s, sy: 0.6, ry: R() * 6 });
+  }
+  let rockGeo = finalize(lumpy(1, 2, 7.7, 0.15, 0.9), (v, n) => col(0.56, 0.57, 0.53).lerp(col(0.44, 0.56, 0.3), Math.max(0, n.y - 0.55) * 1.2), 1), rockMesh = new THREE5.InstancedMesh(rockGeo, uberMat(), rocks.length);
+  placeInstances(rockMesh, rocks, () => col(0.92 + R() * 0.16, 0.92 + R() * 0.14, 0.92 + R() * 0.12)), rockMesh.frustumCulled = !1, scene2.add(rockMesh);
+  let wg = new THREE5.PlaneGeometry(130, 6.4, 260, 4);
+  wg.rotateX(-Math.PI / 2);
+  let wp = wg.attributes.position;
+  for (let i = 0; i < wp.count; i++)
+    wp.setZ(i, wp.getZ(i) + streamZ(wp.getX(i))), wp.setY(i, WATER_Y);
+  scene2.add(new THREE5.Mesh(wg, waterMat(stones.map((s) => ({ x: s.x, z: s.z, r: s.r * 0.95 })))));
+  let blades = [];
+  for (let i = 0; i < 25e4 && blades.length < 16e3; i++) {
+    let z = -36 + R() * 72, off = (R() - 0.5) * 2 * (1.2 + Math.pow(R(), 0.8) * 13), x = pathX(z) + off;
+    Math.abs(off) < 1.05 || Math.abs(z - streamZ(x)) < 2 || noise2(x * 0.35, z * 0.35) < -0.2 && R() < 0.65 || blades.push({ x, y: terrainH(x, z) - 0.03, z, s: 0.3 + R() * 0.38, sx: 0.8 + R() * 0.8, ry: R() * 6.28, tx: (R() - 0.5) * 0.3 });
+  }
+  let grass = new THREE5.InstancedMesh(bladeGeo(), uberMat({ wind: 0.12, noflip: !0, grass: !0, side: THREE5.DoubleSide }), blades.length);
+  placeInstances(grass, blades, () => col(0.85 + R() * 0.3, 0.88 + R() * 0.24, 0.8 + R() * 0.3)), grass.frustumCulled = !1, scene2.add(grass);
+  let blues = [col(0.24, 0.42, 0.86), col(0.34, 0.54, 0.95), col(0.47, 0.65, 0.98), col(0.3, 0.35, 0.82), col(0.52, 0.48, 0.9), col(0.62, 0.74, 0.98)], others = [col(0.98, 0.97, 0.94), col(0.98, 0.86, 0.36), col(0.97, 0.78, 0.86)], fl = [], g = () => (R() + R() + R() - 1.5) / 1.5;
+  function cluster(cx, cz, n, spread, palette) {
+    for (let k = 0; k < n; k++) {
+      let x = cx + g() * spread, z = cz + g() * spread;
+      Math.abs(x - pathX(z)) < 1.15 || Math.abs(z - streamZ(x)) < 2.05 || fl.push({ x, y: terrainH(x, z) - 0.02, z, s: 1.3 + R() * 0.9, ry: R() * 6.28, tx: (R() - 0.5) * 0.25, tz: (R() - 0.5) * 0.25, c: palette[Math.floor(R() * palette.length)] });
+    }
+  }
+  for (let z = 17; z > C.z + 2.4; z -= 0.9)
+    for (let side of [-1, 1]) R() < 0.75 && cluster(pathX(z) + side * (1.5 + R() * 3.2), z + (R() - 0.5), 6 + Math.floor(R() * 10), 0.6, blues);
+  for (let x = C.x - 22; x < C.x + 22; x += 1.1)
+    for (let side of [-1, 1]) R() < 0.7 && cluster(x, streamZ(x) + side * (2.4 + R() * 0.9), 5 + Math.floor(R() * 8), 0.45, blues);
+  for (let i = 0; i < 46; i++) {
+    let z = -25 + R() * 23;
+    cluster(pathX(z) + (R() < 0.5 ? -1 : 1) * (1.6 + R() * 7), z, 5 + Math.floor(R() * 8), 0.7, R() < 0.55 ? blues : others);
+  }
+  let flowers = new THREE5.InstancedMesh(flowerGeo(), uberMat({ flower: !0, wind: 0.35, side: THREE5.DoubleSide }), fl.length);
+  placeInstances(flowers, fl, (it) => it.c), flowers.frustumCulled = !1, scene2.add(flowers);
+  let colliders = buildForest(scene2), tree = buildBlossomTree(scene2);
+  colliders.push({ x: tree.base.x, z: tree.base.z, r: 0.6, h: 4 });
+  for (let rk of rocks.slice(stones.length)) colliders.push({ x: rk.x, z: rk.z, r: rk.s * 0.8, h: rk.s });
+  return { sky, stones, crossing: C, tree, colliders };
+}
+
+// js/girl.js
+import * as THREE6 from "three";
+var hex = (h) => {
+  let n = parseInt(h.slice(1), 16);
+  return new THREE6.Color((n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255);
+}, PAL = {
+  skin: hex("#fbe1cd"),
+  skinShade: hex("#f0bfa8"),
+  blush: hex("#f59b9b"),
+  hair: hex("#5a3323"),
+  hairLight: hex("#7d4b31"),
+  cloak: hex("#c92f3b"),
+  cloakDark: hex("#9e2230"),
+  blouse: hex("#f8f2e7"),
+  bodice: hex("#2f3654"),
+  skirt: hex("#40639f"),
+  apron: hex("#f5eedf"),
+  sock: hex("#f4eee4"),
+  shoe: hex("#4e2b20"),
+  sole: hex("#2e1a14"),
+  eye: hex("#2a1913"),
+  mouth: hex("#a24646"),
+  ribbon: hex("#f6efe1"),
+  wicker: hex("#c48d50"),
+  wickerDark: hex("#94633a"),
+  cloth: hex("#f8f4ec"),
+  check: hex("#d8414a"),
+  bread: hex("#d9a35f"),
+  flower: hex("#4a74e0"),
+  flowerC: hex("#f6d35a")
+}, HEAD = { rx: 0.145, ry: 0.138, rz: 0.14, cy: 0.15 }, V = (x = 0, y = 0, z = 0) => new THREE6.Vector3(x, y, z), Z = V(0, 0, 1), ell = (rx, ry, rz, seg = 14) => new THREE6.SphereGeometry(1, seg, Math.ceil(seg * 0.7)).scale(rx, ry, rz), lathe = (pts, seg = 24, p0 = 0, pl = Math.PI * 2) => new THREE6.LatheGeometry(pts.map(([r, y]) => new THREE6.Vector2(r, y)), seg, p0, pl);
+function limb2(r0, r1, len, seg = 10) {
+  let g = new THREE6.CylinderGeometry(r0, r1, len, seg, 2, !0).translate(0, -len / 2, 0);
+  return mergeGeometries([g.toNonIndexed(), ell(r0, r0, r0, seg).toNonIndexed()].map((x) => (x.deleteAttribute("uv"), x)));
+}
+var tube = (pts, r, seg = 40) => new THREE6.TubeGeometry(new THREE6.CatmullRomCurve3(pts), seg, r, 6, !1);
+function headPoint(x, y, lift = 0) {
+  let { rx, ry, rz, cy } = HEAD, dy = y - cy, z = rz * Math.sqrt(Math.max(0.02, 1 - (x / rx) ** 2 - (dy / ry) ** 2)), n = V(x / rx ** 2, dy / ry ** 2, z / rz ** 2).normalize();
+  return { at: V(x, y, z).addScaledVector(n, lift), q: new THREE6.Quaternion().setFromUnitVectors(Z, n) };
+}
+var Rig = class {
+  constructor() {
+    this.b = {}, this.parts = /* @__PURE__ */ new Map();
+  }
+  bone(name, parent, x = 0, y = 0, z = 0) {
+    let g = new THREE6.Group();
+    return g.position.set(x, y, z), parent && this.b[parent].add(g), this.b[name] = g, g;
+  }
+  add(bone, geo, color, o = {}) {
+    o.scale && geo.scale(...o.scale), o.rot && geo.applyMatrix4(new THREE6.Matrix4().makeRotationFromEuler(new THREE6.Euler(...o.rot, o.order || "XYZ"))), o.q && geo.applyQuaternion(o.q), o.at && geo.translate(o.at.x ?? o.at[0], o.at.y ?? o.at[1], o.at.z ?? o.at[2]);
+    let key = bone + "|" + (o.mat || "body");
+    this.parts.has(key) || this.parts.set(key, []), this.parts.get(key).push(finalize(geo, color));
+  }
+  build(mats) {
+    for (let [key, list] of this.parts) {
+      let [b, m] = key.split("|");
+      this.b[b].add(new THREE6.Mesh(mergeGeometries(list), mats[m]));
+    }
+  }
+}, Girl = class {
+  constructor() {
+    let mats = {
+      body: uberMat({ always: !0, side: THREE6.DoubleSide }),
+      cloak: uberMat({ always: !0, cloak: !0, side: THREE6.DoubleSide }),
+      skirt: uberMat({ always: !0, cloak: !0, side: THREE6.DoubleSide })
+    };
+    mats.cloak.uniforms.uCloakY.value.set(0.25, -0.18), mats.skirt.uniforms.uCloakY.value.set(0.05, -0.15), this.mats = mats;
+    let r = this.rig = new Rig(), b = r.b;
+    r.bone("root", null), b.root.scale.setScalar(1.12), r.bone("body", "root"), r.bone("hips", "body", 0, 0.4, 0), r.bone("torso", "body", 0, 0.43, 0), r.bone("head", "torso", 0, 0.27, 0);
+    for (let [s, k] of [[1, "L"], [-1, "R"]])
+      r.bone("thigh" + k, "hips", s * 0.052, 0, 0), r.bone("shin" + k, "thigh" + k, 0, -0.185, 0), r.bone("foot" + k, "shin" + k, 0, -0.175, 0), r.bone("arm" + k, "torso", s * 0.098, 0.222, 0), r.bone("fore" + k, "arm" + k, 0, -0.125, 0), r.bone("hand" + k, "fore" + k, 0, -0.115, 0);
+    this.root = b.root;
+    for (let k of ["L", "R"])
+      r.add("thigh" + k, limb2(0.046, 0.038, 0.185), PAL.skin), r.add("shin" + k, limb2(0.037, 0.03, 0.175), (v) => v.y < -0.035 ? PAL.sock : PAL.skin), r.add("shin" + k, new THREE6.TorusGeometry(0.036, 7e-3, 6, 14).rotateX(Math.PI / 2), PAL.sock, { at: [0, -0.038, 0] }), r.add("foot" + k, ell(0.043, 0.034, 0.074), PAL.shoe, { at: [0, -0.012, 0.024] }), r.add("foot" + k, ell(0.046, 0.011, 0.078), PAL.sole, { at: [0, -0.038, 0.024] }), r.add("foot" + k, new THREE6.TorusGeometry(0.036, 5e-3, 5, 12, Math.PI).rotateY(Math.PI / 2), PAL.shoe, { at: [0, -8e-3, 0.03] });
+    let skirt = lathe([[0.19, -0.14], [0.176, -0.08], [0.142, 0], [0.104, 0.05], [0.088, 0.075]], 40), sp = skirt.attributes.position;
+    for (let i = 0; i < sp.count; i++) {
+      let x = sp.getX(i), y = sp.getY(i), z = sp.getZ(i), w = 1 + 0.055 * Math.sin(Math.atan2(x, z) * 10) * Math.max(0, (-0.02 - y) / 0.12);
+      sp.setXYZ(i, x * w, y, z * w);
+    }
+    skirt.computeVertexNormals(), r.add("hips", skirt, PAL.skirt, { mat: "skirt" });
+    let lace = lathe([[0.184, -0.158], [0.188, -0.146], [0.186, -0.134]], 40), lp = lace.attributes.position;
+    for (let i = 0; i < lp.count; i++) lp.getY(i) < -0.15 && lp.setY(i, lp.getY(i) + 8e-3 * Math.abs(Math.sin(Math.atan2(lp.getX(i), lp.getZ(i)) * 14)));
+    r.add("hips", lace, PAL.ribbon, { mat: "skirt" }), r.add("hips", lathe([[0.183, -0.112], [0.168, -0.07], [0.138, 0], [0.104, 0.045]], 16, -0.9, 1.8), PAL.apron, { mat: "skirt", scale: [1.035, 1, 1.035] }), r.add("hips", lathe([[0.1, 0.045], [0.093, 0.068]], 24), PAL.apron, { scale: [1.04, 1, 1.04] });
+    for (let s of [1, -1]) r.add("hips", ell(0.03, 0.018, 0.012), PAL.apron, { at: [s * 0.03, 0.06, -0.1], rot: [0, 0, s * 0.5] });
+    r.add(
+      "torso",
+      lathe([[0.088, -0.035], [0.084, 0.02], [0.092, 0.1], [0.098, 0.16], [0.09, 0.21], [0.07, 0.245], [0.034, 0.27], [0.03, 0.3]], 24),
+      (v) => v.y < 0.15 ? PAL.bodice : v.y < 0.27 ? PAL.blouse : PAL.skin,
+      { scale: [1, 1, 0.86] }
+    );
+    for (let y of [0.02, 0.06, 0.1]) for (let s of [1, -1])
+      r.add("torso", new THREE6.BoxGeometry(0.05, 5e-3, 4e-3), PAL.ribbon, { at: [0, y + 0.018, 0.081], rot: [0, 0, s * 0.62] });
+    for (let s of [1, -1]) r.add("torso", ell(0.04, 0.026, 8e-3), PAL.ribbon, { at: [s * 0.032, 0.252, 0.05], rot: [-0.9, 0, -s * 0.35] });
+    let gap = 0.62, prof = [[0.262, -0.18], [0.255, -0.1], [0.238, 0], [0.212, 0.1], [0.178, 0.185], [0.128, 0.238], [0.076, 0.272]], fold = (a, y) => {
+      let t2 = Math.min(1, Math.max(0, (0.16 - y) / 0.34));
+      return 1 + 0.045 * Math.sin(a * 9 + 0.6) * t2 * t2;
+    }, onCloak = (rr, a, y) => V(rr * fold(a, y) * Math.sin(a), y, rr * fold(a, y) * Math.cos(a) * 0.92), cloak = lathe(prof, 48, gap, Math.PI * 2 - gap * 2), cp = cloak.attributes.position;
+    for (let i = 0; i < cp.count; i++) {
+      let x = cp.getX(i), y = cp.getY(i), z = cp.getZ(i), f = fold(Math.atan2(x, z), y);
+      cp.setXYZ(i, x * f, y, z * f);
+    }
+    cloak.computeVertexNormals(), r.add("torso", cloak, (v) => PAL.cloak.clone().multiplyScalar(0.84 + 0.16 * Math.min(1, (v.y + 0.18) / 0.4)), { mat: "cloak", scale: [1, 1, 0.92] });
+    for (let s of [1, -1]) r.add("torso", tube(prof.map(([rr, y]) => onCloak(rr, s * gap, y)), 8e-3, 24), PAL.cloakDark, { mat: "cloak" });
+    let hem = Array.from({ length: 65 }, (_, i) => onCloak(0.263, gap + i / 64 * (Math.PI * 2 - gap * 2), -0.18));
+    r.add("torso", tube(hem, 8e-3, 64), PAL.cloakDark, { mat: "cloak" }), r.add("torso", ell(0.017, 0.015, 0.012), PAL.ribbon, { at: [0, 0.262, 0.074] });
+    for (let s of [1, -1])
+      r.add("torso", ell(0.03, 0.017, 0.01), PAL.ribbon, { at: [s * 0.03, 0.266, 0.07], rot: [0, -s * 0.3, s * 0.4] }), r.add("torso", new THREE6.BoxGeometry(0.014, 0.065, 4e-3), PAL.ribbon, { at: [s * 0.014, 0.222, 0.08], rot: [0.12, 0, s * 0.18] });
+    for (let k of ["L", "R"])
+      r.add("arm" + k, ell(0.042, 0.046, 0.042), PAL.blouse, { at: [0, -0.025, 0] }), r.add("arm" + k, limb2(0.03, 0.027, 0.125), PAL.skin), r.add("fore" + k, limb2(0.027, 0.024, 0.115), PAL.skin), r.add("hand" + k, ell(0.03, 0.036, 0.026), PAL.skin, { at: [0, -0.024, 4e-3] }), r.add("hand" + k, ell(0.011, 0.018, 0.011), PAL.skin, { at: [k === "L" ? -0.022 : 0.022, -0.012, 0.016], rot: [0.3, 0, k === "L" ? 0.5 : -0.5] });
+    this.buildBasket(r), this.buildHead(r), r.build(mats), this.b = b, this.blinkT = 2, this.basketSwing = 0, this.basketVel = 0, this.braidSwing = 0, this.braidVel = 0, this.prevYaw = null;
+  }
+  buildBasket(r) {
+    r.bone("basket", "handR", 0, -0.03, 0.012), r.add("basket", new THREE6.TorusGeometry(0.075, 8e-3, 6, 20, Math.PI), PAL.wickerDark, { at: [0, -0.075, 0] });
+    let body = lathe([[1e-3, -0.17], [0.07, -0.168], [0.088, -0.14], [0.095, -0.1], [0.1, -0.078]], 28);
+    r.add("basket", body, (v) => {
+      let band = Math.floor((v.y + 0.2) / 0.011) % 2;
+      return (Math.floor((Math.atan2(v.x, v.z) + Math.PI) / (Math.PI / 14) + band) % 2 ? PAL.wicker : PAL.wickerDark).clone().multiplyScalar(band ? 1 : 0.92);
+    }), r.add("basket", new THREE6.TorusGeometry(0.1, 9e-3, 6, 28).rotateX(Math.PI / 2), PAL.wickerDark, { at: [0, -0.078, 0] }), r.add("basket", ell(0.09, 0.03, 0.09, 18), (v) => (Math.floor(v.x / 0.022 + 50) + Math.floor(v.z / 0.022 + 50)) % 2 ? PAL.check : PAL.cloth, { at: [0, -0.078, 0] }), r.add("basket", ell(0.05, 0.035, 0.012), (v) => (Math.floor(v.x / 0.02 + 50) + Math.floor(v.y / 0.02 + 50)) % 2 ? PAL.check : PAL.cloth, { at: [0.02, -0.1, 0.098], rot: [0.2, 0, 0.3] }), r.add("basket", ell(0.045, 0.028, 0.03), PAL.bread, { at: [-0.035, -0.055, -0.02], rot: [0, 0.4, 0.3] });
+    for (let [x, z, c] of [[0.04, 0.03, PAL.flower], [0.055, -0.01, hex("#6d8ff0")], [0.025, 0.05, PAL.flowerC]])
+      r.add("basket", ell(0.016, 0.01, 0.016, 8), c, { at: [x, -0.045, z] }), r.add("basket", ell(5e-3, 5e-3, 5e-3, 6), PAL.flowerC, { at: [x, -0.037, z] });
+  }
+  buildHead(r) {
+    let { cy } = HEAD;
+    r.add("head", limb2(0.032, 0.03, 0.06), PAL.skin, { at: [0, 0.035, 0] }), r.add("head", ell(HEAD.rx, HEAD.ry, HEAD.rz, 24), PAL.skin, { at: [0, cy, 0] });
+    for (let s of [1, -1]) r.add("head", ell(0.06, 0.055, 0.06), PAL.skin, { at: [s * 0.058, cy - 0.055, 0.062] });
+    for (let [s, k] of [[1, "L"], [-1, "R"]]) {
+      let p = headPoint(s * 0.054, cy - 6e-3, -4e-3);
+      r.bone("eye" + k, "head", p.at.x, p.at.y, p.at.z).quaternion.copy(p.q), r.add("eye" + k, ell(0.021, 0.029, 9e-3), PAL.eye), r.add("eye" + k, ell(68e-4, 78e-4, 3e-3), PAL.ribbon, { at: [s * 6e-3, 0.01, 8e-3] }), r.add("eye" + k, ell(35e-4, 35e-4, 2e-3), PAL.ribbon, { at: [-s * 7e-3, -0.012, 8e-3] }), r.add("eye" + k, new THREE6.TorusGeometry(0.024, 32e-4, 4, 12, Math.PI * 0.82), PAL.eye, { rot: [0, 0, Math.PI * 0.09], at: [0, 3e-3, 4e-3] }), r.add("eye" + k, new THREE6.BoxGeometry(0.012, 35e-4, 3e-3), PAL.eye, { at: [s * 0.024, 0.017, 4e-3], rot: [0, 0, s * 0.6] });
+      let br = headPoint(s * 0.056, cy + 0.044, 2e-3);
+      r.add("head", new THREE6.BoxGeometry(0.032, 55e-4, 4e-3), PAL.hair, { q: br.q, at: br.at, rot: [0, 0, s * 0.14] });
+      let ch = headPoint(s * 0.09, cy - 0.04, 3e-3);
+      r.add("head", ell(0.026, 0.015, 4e-3), PAL.blush, { q: ch.q, at: ch.at });
+    }
+    let nose = headPoint(0, cy - 0.028, 2e-3);
+    r.add("head", ell(0.011, 9e-3, 8e-3), PAL.skinShade, { at: nose.at });
+    let m = headPoint(0, cy - 0.062, 1e-3);
+    r.add("head", new THREE6.TorusGeometry(0.013, 28e-4, 4, 10, Math.PI * 0.7), PAL.mouth, { rot: [0, 0, Math.PI * 1.15], q: m.q, at: m.at });
+    let g = 0.012;
+    r.add("head", new THREE6.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, 0.85), (v) => v.y > 0.95 ? PAL.hairLight : PAL.hair, { scale: [HEAD.rx + g, HEAD.ry + g, HEAD.rz + g], at: [0, cy + 4e-3, -4e-3] }), r.add("head", new THREE6.SphereGeometry(1, 28, 14, Math.PI / 2 + 1.05, Math.PI * 2 - 2.1, 0.7, 1.55), PAL.hair, { scale: [HEAD.rx + g, HEAD.ry + g, HEAD.rz + g], at: [0, cy + 4e-3, -4e-3] });
+    let lock = (rx, ry, rz) => {
+      let geo = ell(rx, ry, rz, 12), p = geo.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        let y = p.getY(i);
+        y < 0 && p.setX(i, p.getX(i) * (1 + 0.6 * y / ry));
+      }
+      return geo.computeVertexNormals(), geo;
+    };
+    for (let i = -4; i <= 4; i++) {
+      let x = i * 0.021, p = headPoint(x, cy + 0.088 - x * x * 2.2 + (i % 2 ? 6e-3 : 0), 9e-3);
+      r.add("head", lock(0.019, 0.04, 8e-3), (v) => v.y > 0.012 ? PAL.hairLight : PAL.hair, { rot: [0, 0, -x * 2.2], q: p.q, at: p.at });
+    }
+    for (let s of [1, -1]) {
+      let p = headPoint(s * 0.124, cy - 0.012, 6e-3);
+      r.add("head", lock(0.013, 0.062, 9e-3), PAL.hair, { rot: [0, 0, s * 0.08], q: p.q, at: p.at });
+    }
+    this.braids = [];
+    for (let [s, k] of [[1, "L"], [-1, "R"]]) {
+      let parent = "head", chain = [];
+      for (let i = 0; i < 5; i++) {
+        let name = `braid${k}${i}`;
+        i === 0 ? r.bone(name, parent, s * 0.105, cy - 0.085, 0.045) : r.bone(name, parent, 0, -0.04, 0), r.add(name, ell(0.024 - i * 2e-3, 0.027, 0.022 - i * 15e-4), i % 2 ? PAL.hairLight : PAL.hair, { at: [s * (i % 2 ? 4e-3 : -4e-3), -0.02, 0], rot: [0, 0, (i % 2 ? 1 : -1) * 0.35] }), chain.push(r.b[name]), parent = name;
+      }
+      for (let t2 of [1, -1]) r.add(parent, ell(0.018, 0.01, 8e-3), PAL.cloak, { at: [t2 * 0.016, -0.045, 6e-3], rot: [0, 0, t2 * 0.5] });
+      r.add(parent, ell(8e-3, 8e-3, 8e-3), PAL.cloakDark, { at: [0, -0.045, 8e-3] }), r.add(parent, new THREE6.ConeGeometry(0.016, 0.04, 8).rotateX(Math.PI), PAL.hair, { at: [0, -0.07, 0] }), this.braids.push({ s, chain });
+    }
+    let hs = [0.176, 0.17, 0.176], ho = V(0, cy + 0.012, -0.014), open = 0.98;
+    r.add("head", new THREE6.SphereGeometry(1, 32, 20, Math.PI / 2 + open, Math.PI * 2 - open * 2, 0, 2.3), PAL.cloak, { scale: hs, at: ho });
+    let rim = [];
+    for (let i = 0; i <= 24; i++) {
+      let t2 = i / 24, side = t2 < 0.5 ? -1 : 1, th = 2.25 * Math.abs(1 - 2 * t2) + 0.04, phi = Math.PI / 2 + side * open;
+      rim.push(V(-Math.cos(phi) * Math.sin(th) * hs[0], Math.cos(th) * hs[1], Math.sin(phi) * Math.sin(th) * hs[2]).add(ho));
+    }
+    r.add("head", tube(rim, 0.013, 48), PAL.cloakDark), r.add("head", new THREE6.ConeGeometry(0.05, 0.11, 12), PAL.cloak, { rot: [-2.2, 0, 0], at: [0, cy + 0.1, -0.17] });
+  }
+  // st: { walkAmt 0..1, run 0..1, phase, hop -1|0..1, look 0..1, wind }
+  pose(st, t2, dt = 1 / 60) {
+    let b = this.b, w = Math.min(1, st.walkAmt), run = st.run || 0, s = Math.sin(st.phase), c = Math.cos(st.phase), amp = (0.42 + 0.25 * run) * w, tl = -s * amp, tr = s * amp, kl = Math.max(0, c) * (0.75 + 0.4 * run) * w + 0.04, kr = Math.max(0, -c) * (0.75 + 0.4 * run) * w + 0.04, bob = Math.abs(c) * (0.022 + 0.02 * run) * w, lean = 0.05 * w + 0.12 * run, al = s * (0.3 + 0.2 * run) * w, alz = 0.05, arx = -0.38 - s * 0.1 * w, arz = -0.1, hop = st.hop >= 0 ? Math.sin(st.hop * Math.PI) : 0;
+    st.hop >= 0 && (tl = -0.75 * hop, tr = -0.25 * hop, kl = 1 * hop, kr = 0.7 * hop, bob = 0, lean = 0.15 * hop, al = -0.5 * hop, alz = 0.1 + 0.6 * hop, arz = -0.1 - 0.3 * hop);
+    let breathe = Math.sin(t2 * 2.1) * (1 - w);
+    b.thighL.rotation.x = tl, b.thighR.rotation.x = tr, b.shinL.rotation.x = kl, b.shinR.rotation.x = kr, b.footL.rotation.x = -(tl + kl) * 0.7, b.footR.rotation.x = -(tr + kr) * 0.7, b.body.position.y = bob + 4e-3 * breathe, b.hips.rotation.y = s * 0.1 * w, b.torso.rotation.set(lean, -s * 0.08 * w, 0), b.torso.scale.set(1, 1 + 8e-3 * breathe, 1), b.armL.rotation.set(al, 0, alz), b.foreL.rotation.x = -0.22 - 0.25 * w - 0.4 * hop, b.armR.rotation.set(arx, 0, arz), b.foreR.rotation.x = -1 - 0.1 * hop, b.handR.rotation.x = 0.2;
+    let k = Math.min(1, dt * 60);
+    this.basketVel += (-this.basketSwing * 0.08 + s * 0.012 * w - this.basketVel * 0.08) * k, this.basketSwing += this.basketVel * k, b.basket.rotation.x = -(lean + arx + b.foreR.rotation.x + 0.2) + this.basketSwing, b.basket.rotation.z = -arz + this.basketSwing * 0.4, b.head.rotation.set(-0.5 * st.look - lean * 0.6 + Math.sin(t2 * 1.3) * 0.02, Math.sin(t2 * 0.6) * 0.12 * (1 - w) * (1 - st.look), Math.sin(t2 * 0.9) * 0.03 * (1 - w)), this.blinkT -= dt, this.blinkT < -0.13 && (this.blinkT = 2 + t2 * 7.31 % 3);
+    let eyeY = this.blinkT < 0 ? 0.12 : 1;
+    b.eyeL.scale.y = b.eyeR.scale.y = eyeY;
+    let yaw = this.root.rotation.y, dyaw = this.prevYaw === null ? 0 : Math.atan2(Math.sin(yaw - this.prevYaw), Math.cos(yaw - this.prevYaw));
+    this.prevYaw = yaw, this.braidVel += (-this.braidSwing * 0.1 - dyaw * 0.6 - this.braidVel * 0.12) * k, this.braidSwing += this.braidVel * k;
+    for (let { s: side, chain } of this.braids)
+      chain.forEach((bone, i) => {
+        let f = (i + 1) / chain.length;
+        bone.rotation.x = (i === 0 ? -0.55 + st.look * 0.5 + lean : 0.16) + Math.sin(st.phase * 2 + i * 0.7) * 0.06 * w + hop * 0.25 * f, bone.rotation.z = side * (i === 0 ? 0.12 : 0.02) + this.braidSwing * 0.5 * f + Math.sin(t2 * 1.7 + i) * 0.02;
+      });
+    for (let [m, a] of [[this.mats.cloak, 1], [this.mats.skirt, 0.45]]) {
+      let u = m.uniforms.uCloak.value;
+      u.x += ((w * 0.6 + run * 0.5 + hop * 0.8 + st.wind * 0.35) * a - u.x) * Math.min(1, dt * 5), u.y = (0.35 + w * 0.9 + run * 0.5) * a, u.w = st.phase * 2 + t2 * 2;
+    }
+  }
+};
+
+// js/mask.js
+import * as THREE7 from "three";
+var ColorMask = class {
+  constructor(b = { minX: -50, minZ: -72, sizeX: 100, sizeZ: 118 }, res = 512) {
+    this.b = b, this.res = res, this.out = document.createElement("canvas"), this.base = document.createElement("canvas"), this.out.width = this.out.height = this.base.width = this.base.height = res, this.ctx = this.out.getContext("2d"), this.bctx = this.base.getContext("2d"), this.tex = new THREE7.CanvasTexture(this.out), this.tex.flipY = !1, this.tex.generateMipmaps = !1, this.tex.minFilter = this.tex.magFilter = THREE7.LinearFilter, this.bounds = new THREE7.Vector4(b.minX, b.minZ, b.sizeX, b.sizeZ), this.reset();
+  }
+  reset() {
+    for (let c of [this.ctx, this.bctx])
+      c.globalCompositeOperation = "source-over", c.fillStyle = "#000", c.fillRect(0, 0, this.res, this.res);
+    this.stamps = [], this.tex.needsUpdate = !0;
+  }
+  add(x, z, r, now, { delay = 0, dur = 1.4 } = {}) {
+    this.stamps.push({ x, z, r, t0: now + delay, dur });
+  }
+  _draw(ctx, s, k) {
+    let { b, res } = this, px = (s.x - b.minX) / b.sizeX * res, py = (s.z - b.minZ) / b.sizeZ * res, rr = Math.max(0.5, s.r * k / b.sizeX * res);
+    ctx.save(), ctx.globalCompositeOperation = "lighter", ctx.translate(px, py), ctx.scale(1, b.sizeX / b.sizeZ);
+    let g = ctx.createRadialGradient(0, 0, 0, 0, 0, rr);
+    g.addColorStop(0, "rgba(255,255,255,1)"), g.addColorStop(0.45, "rgba(255,255,255,0.85)"), g.addColorStop(0.75, "rgba(255,255,255,0.4)"), g.addColorStop(1, "rgba(255,255,255,0)"), ctx.fillStyle = g, ctx.beginPath(), ctx.arc(0, 0, rr, 0, Math.PI * 2), ctx.fill(), ctx.restore();
+  }
+  update(now) {
+    if (!this.stamps.some((s) => now >= s.t0)) return;
+    let ctx = this.ctx;
+    ctx.globalCompositeOperation = "copy", ctx.drawImage(this.base, 0, 0);
+    let keep = [];
+    for (let s of this.stamps) {
+      if (now < s.t0) {
+        keep.push(s);
+        continue;
+      }
+      let k = Math.min(1, (now - s.t0) / s.dur), e = 1 - Math.pow(1 - k, 3);
+      k >= 1 ? this._draw(this.bctx, s, 1) : keep.push(s), this._draw(ctx, s, e);
+    }
+    this.stamps = keep, this.tex.needsUpdate = !0;
+  }
+};
+
+// js/director.js
+import * as THREE9 from "three";
+
+// js/player.js
+import * as THREE8 from "three";
+var STRIDE = 0.46, WALK = 1.55, RUN = 3.1, clamp = (v, a, b) => Math.min(b, Math.max(a, v)), wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a)), Input = class {
+  constructor(el) {
+    this.keys = /* @__PURE__ */ new Set(), this.stick = { x: 0, z: 0 }, this.dYaw = 0, this.dPitch = 0, this.dZoom = 0, this.lastDrag = -1e9, this.jump = !1, this.touched = !1;
+    let watch = ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "ShiftLeft", "ShiftRight"];
+    addEventListener("keydown", (e) => {
+      watch.includes(e.code) && (e.preventDefault(), e.code === "Space" && !e.repeat && (this.jump = !0), this.keys.add(e.code), this.touched = !0);
+    }), addEventListener("keyup", (e) => this.keys.delete(e.code)), addEventListener("blur", () => {
+      this.keys.clear(), this.stick.x = 0, this.stick.z = 0;
+    });
+    let pts = /* @__PURE__ */ new Map(), pinchDist = 0, getPinch = () => {
+      let [a, b] = [...pts.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+    el.addEventListener("pointerdown", (e) => {
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY }), el.setPointerCapture(e.pointerId), pts.size === 2 && (pinchDist = getPinch());
+    }), el.addEventListener("pointermove", (e) => {
+      let prev = pts.get(e.pointerId);
+      if (!prev) return;
+      let dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+      if (prev.x = e.clientX, prev.y = e.clientY, pts.size === 1)
+        this.dYaw -= dx * 6e-3, this.dPitch += dy * 5e-3, this.lastDrag = performance.now();
+      else if (pts.size === 2) {
+        let d = getPinch();
+        pinchDist > 0 && (this.dZoom += (pinchDist - d) * 45e-4), pinchDist = d;
+      }
+    });
+    let endPtr = (e) => {
+      pts.delete(e.pointerId), pts.size === 2 && (pinchDist = getPinch());
+    };
+    el.addEventListener("pointerup", endPtr), el.addEventListener("pointercancel", endPtr), el.addEventListener("wheel", (e) => {
+      this.dZoom += e.deltaY * 15e-4, e.preventDefault();
+    }, { passive: !1 });
+  }
+  setStick(x, z) {
+    this.stick.x = x, this.stick.z = z, (x !== 0 || z !== 0) && (this.touched = !0);
+  }
+  axis() {
+    let k = this.keys, on = (...c) => c.some((x) => k.has(x)), kx = (on("KeyD", "ArrowRight") ? 1 : 0) - (on("KeyA", "ArrowLeft") ? 1 : 0), kz = (on("KeyW", "ArrowUp") ? 1 : 0) - (on("KeyS", "ArrowDown") ? 1 : 0), mag = Math.hypot(this.stick.x, this.stick.z);
+    return mag > 0.08 ? { x: this.stick.x, z: this.stick.z, run: mag > 0.78 || on("ShiftLeft", "ShiftRight") } : { x: kx, z: kz, run: on("ShiftLeft", "ShiftRight") };
+  }
+}, Player = class {
+  constructor(world2) {
+    this.stones = world2.stones, this.colliders = world2.colliders;
+  }
+  reset(pos, facing = Math.PI) {
+    this.pos = pos.clone(), this.facing = facing, this.vel = new THREE8.Vector2(), this.phase = 0, this.run = 0, this.look = 0, this.hop = null, this.support = this.supportAt(pos.x, pos.z), this.pos.y = this.support.y;
+  }
+  supportAt(x, z) {
+    for (let i = 0; i < this.stones.length; i++) {
+      let s = this.stones[i];
+      if (Math.hypot(x - s.x, z - s.z) < s.r * 1.02) return { id: i, y: s.top };
+    }
+    let h = terrainH(x, z);
+    return Math.abs(z - streamZ(x)) < 3.1 && h < WATER_Y + 0.04 ? { id: "water", y: WATER_Y } : { id: -1, y: Math.max(h, WATER_Y) };
+  }
+  blocked(x, z) {
+    if (z > 38 || z < -62 || Math.abs(x - pathX(z)) > 26) return !0;
+    for (let c of this.colliders) {
+      let dx = x - c.x, dz = z - c.z, rr = c.r + 0.2;
+      if (dx * dx + dz * dz < rr * rr) return !0;
+    }
+    return !1;
+  }
+  startHop(x, z, sup, dur = 0.42, h = 0.24) {
+    this.hop = { a: this.pos.clone(), b: new THREE8.Vector3(x, sup.y, z), t: 0, dur, h, sup };
+    let dx = x - this.pos.x, dz = z - this.pos.z;
+    dx * dx + dz * dz > 1e-4 && (this.facing = Math.atan2(dx, dz));
+  }
+  // 从当前位置沿方向找下一块可落脚的地方（石头或岸）
+  findLanding(dx, dz) {
+    let best = null, bd = 1e9;
+    if (this.stones.forEach((s, i) => {
+      if (i === this.support.id) return;
+      let ox = s.x - this.pos.x, oz = s.z - this.pos.z, d = Math.hypot(ox, oz);
+      (ox * dx + oz * dz) / (d || 1) > 0.55 && d < 1.3 && d < bd && (bd = d, best = { x: s.x, z: s.z, sup: { id: i, y: s.top } });
+    }), best) return best;
+    for (let d = 0.45; d <= 1.3; d += 0.1) {
+      let gx = this.pos.x + dx * d, gz = this.pos.z + dz * d;
+      if (this.supportAt(gx, gz).id === -1 && !this.blocked(gx, gz)) return { x: gx + dx * 0.15, z: gz + dz * 0.15, sup: this.supportAt(gx + dx * 0.15, gz + dz * 0.15) };
+    }
+    return null;
+  }
+  update(dt, input2, camYaw, nearTree) {
+    let a = input2.axis(), fx = Math.sin(camYaw), fz = Math.cos(camYaw), mx = fx * a.z - fz * a.x, mz = fz * a.z + fx * a.x, ml = Math.hypot(mx, mz);
+    ml > 0 && (mx /= ml, mz /= ml);
+    let speed = ml > 0 ? a.run ? RUN : WALK : 0, k = 1 - Math.exp(-dt * 9);
+    this.vel.x += (mx * speed - this.vel.x) * k, this.vel.y += (mz * speed - this.vel.y) * k, this.run += ((a.run && ml > 0 ? 1 : 0) - this.run) * k;
+    let sp = this.vel.length(), landed = null;
+    if (this.hop) {
+      let h = this.hop;
+      h.t = Math.min(1, h.t + dt / h.dur);
+      let e = h.t * h.t * (3 - 2 * h.t);
+      this.pos.lerpVectors(h.a, h.b, e), this.pos.y += Math.sin(h.t * Math.PI) * h.h, h.t >= 1 && (this.pos.copy(h.b), this.support = h.sup, landed = this.pos.clone(), this.hop = null), input2.jump = !1;
+    } else if (input2.jump) {
+      input2.jump = !1;
+      let dx = Math.sin(this.facing), dz = Math.cos(this.facing), reach = sp > 0.3 ? 0.4 + sp * 0.3 : 0, tx = this.pos.x + dx * reach, tz = this.pos.z + dz * reach, sup = this.supportAt(tx, tz);
+      if (sup.id === "water" || this.blocked(tx, tz)) {
+        let l = sup.id === "water" ? this.findLanding(dx, dz) : null;
+        l ? (tx = l.x, tz = l.z, sup = l.sup) : (tx = this.pos.x, tz = this.pos.z, sup = this.support);
+      }
+      this.startHop(tx, tz, sup, 0.55, 0.38);
+    } else if (sp > 0.02) {
+      let dx = this.vel.x / sp, dz = this.vel.y / sp, nx = this.pos.x + this.vel.x * dt, nz = this.pos.z + this.vel.y * dt, tx = nx, tz = nz;
+      this.blocked(tx, tz) && (this.blocked(nx, this.pos.z) ? this.blocked(this.pos.x, nz) ? (tx = this.pos.x, tz = this.pos.z) : tx = this.pos.x : tz = this.pos.z);
+      let sup = this.supportAt(tx, tz);
+      if (sup.id === "water") {
+        let l = this.findLanding(dx, dz);
+        l ? this.startHop(l.x, l.z, l.sup) : (this.vel.multiplyScalar(0.3), sp = 0);
+      } else sup.id !== this.support.id && (sup.id !== -1 || this.support.id !== -1) ? sup.id === -1 ? this.startHop(tx + dx * 0.3, tz + dz * 0.3, this.supportAt(tx + dx * 0.3, tz + dz * 0.3)) : this.startHop(this.stones[sup.id].x, this.stones[sup.id].z, sup) : (this.pos.set(tx, sup.y, tz), this.support = sup);
+    }
+    return this.hop || (this.phase += sp * dt / STRIDE * Math.PI), sp > 0.05 && !this.hop && (this.facing += wrap(Math.atan2(this.vel.x, this.vel.y) - this.facing) * Math.min(1, dt * 10)), this.look += ((nearTree && sp < 0.1 && !this.hop ? 1 : 0) - this.look) * Math.min(1, dt * 1.5), {
+      pos: this.pos.clone(),
+      facing: this.facing,
+      walkAmt: this.hop ? 0 : Math.min(1, sp / WALK),
+      run: this.run * smoothstep(WALK, RUN, sp),
+      phase: this.phase,
+      hop: this.hop ? this.hop.t : -1,
+      look: this.look,
+      wind: 0,
+      landed
+    };
+  }
+}, OrbitCam = class {
+  constructor() {
+    this.yaw = Math.PI, this.pitch = 0.3, this.dist = 4.4;
+  }
+  desired(dt, input2, girlPos, facing, moving, colliders = []) {
+    this.yaw += input2.dYaw, this.pitch = clamp(this.pitch + input2.dPitch, 0.02, 1.15), this.dist = clamp(this.dist * (1 + input2.dZoom), 2, 11), input2.dYaw = input2.dPitch = input2.dZoom = 0, moving && performance.now() - input2.lastDrag > 1500 && (this.yaw += wrap(facing - this.yaw) * (1 - Math.exp(-dt * 1.1)));
+    let look = girlPos.clone().add(new THREE8.Vector3(0, 0.8, 0)), f = new THREE8.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)), at = (d2) => look.clone().addScaledVector(f, -d2 * Math.cos(this.pitch)).add(new THREE8.Vector3(0, d2 * Math.sin(this.pitch), 0)), hit = (p) => colliders.some((c) => {
+      let dx = p.x - c.x, dz = p.z - c.z, rr = c.r + 0.35;
+      return dx * dx + dz * dz < rr * rr && p.y < terrainH(c.x, c.z) + c.h;
+    }), d = this.dist, pos = at(d);
+    for (let i = 0; i < 14 && hit(pos) && d > 1.2; i++) pos = at(d *= 0.86);
+    return { pos, look };
+  }
+};
+
+// js/director.js
+var V2 = (x, y, z) => new THREE9.Vector3(x, y, z), P = (z) => V2(pathX(z), terrainH(pathX(z), z), z), STRIDE2 = 0.46;
+function walkSeg(z0, z1, speed, ramp = 0.7) {
+  let pts = [], len = [0], n = Math.ceil(Math.abs(z1 - z0) / 0.2);
+  for (let i = 0; i <= n; i++) pts.push(P(z0 + (z1 - z0) * i / n));
+  for (let i = 1; i <= n; i++) len.push(len[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z));
+  let D = len[n];
+  return {
+    type: "walk",
+    dur: D / speed + ramp,
+    at(tau) {
+      let T = this.dur, s, v;
+      if (tau < ramp)
+        s = 0.5 * speed * tau * tau / ramp, v = speed * tau / ramp;
+      else if (tau > T - ramp) {
+        let r = Math.max(0, T - tau);
+        s = D - 0.5 * speed * r * r / ramp, v = speed * r / ramp;
+      } else
+        s = speed * ramp / 2 + speed * (tau - ramp), v = speed;
+      s = Math.min(D, Math.max(0, s));
+      let i = 1;
+      for (; i < n && len[i] < s; ) i++;
+      let k = (s - len[i - 1]) / Math.max(1e-6, len[i] - len[i - 1]), pos = pts[i - 1].clone().lerp(pts[i], k), dir = pts[i].clone().sub(pts[i - 1]);
+      return { pos, dir, dist: s, walkAmt: Math.min(1, v / speed), phase: s / STRIDE2 * Math.PI };
+    }
+  };
+}
+var Director = class {
+  constructor(world2, girl2, mask2, camera2, input2) {
+    Object.assign(this, { world: world2, girl: girl2, mask: mask2, camera: camera2, input: input2 }), this.player = new Player(world2), this.orbit = new OrbitCam(), this.mode = "play";
+    let C = world2.crossing, segs = [], t2 = 0, add = (s) => (s.t0 = t2, t2 += s.dur, s.t1 = t2, segs.push(s), s);
+    add({ type: "wait", dur: 2.6, p: P(22) }), add(walkSeg(22, C.z + 2.75, 1.5)), this.tBank = t2, add({ type: "wait", dur: 1, p: P(C.z + 2.75), flood: !0 });
+    let prev = P(C.z + 2.75), hops = [...world2.stones.map((s) => V2(s.x, s.top, s.z)), P(C.z - 2.75)];
+    for (let to of hops)
+      add({ type: "hop", dur: 0.5, a: prev, b: to }), add({ type: "wait", dur: 0.16, p: to, land: !0 }), prev = to;
+    this.tCrossEnd = t2, add(walkSeg(C.z - 2.75, -21.2, 1.3, 1.1)), add({ type: "wait", dur: 1e9, p: P(-21.2), end: !0 }), this.segs = segs, this.treeBase = world2.tree.base, U.uTree.value.copy(this.treeBase), U.uBurstPos.value.copy(this.treeBase), U.uGroundMin.value = this.treeBase.y - 0.8, this.reset();
+  }
+  reset() {
+    this.R = rng(42), this.segIdx = -1, this.lastStep = 0, this.bloomT = null, this.firstStamp = !1, this.flooded = !1, this.facing = Math.PI, this.phase = 0, this.camInit = !1, this.player.reset(P(22), Math.PI), Object.assign(this.orbit, { yaw: Math.PI, pitch: 0.3, dist: 4.4 }), this.mask.reset(), U.uBloom.value = 0, U.uBurstR.value = 0, U.uSky.value = 0, U.uPetalT.value = -1;
+  }
+  state(t2) {
+    let i = this.segs.findIndex((s2) => t2 < s2.t1);
+    i < 0 && (i = this.segs.length - 1);
+    let s = this.segs[i], tau = t2 - s.t0, st = { i, seg: s, walkAmt: 0, phase: this.phase, hop: -1, look: 0, wind: 0 };
+    if (s.type === "walk") {
+      let w = s.at(tau);
+      Object.assign(st, { pos: w.pos, walkAmt: w.walkAmt, phase: w.phase, dir: w.dir }), this.phase = w.phase;
+    } else if (s.type === "hop") {
+      let k = Math.min(1, tau / s.dur), e = k * k * (3 - 2 * k);
+      st.pos = s.a.clone().lerp(s.b, e), st.pos.y += Math.sin(k * Math.PI) * 0.28, st.dir = s.b.clone().sub(s.a), st.hop = k;
+    } else
+      st.pos = s.p.clone(), s.end && (st.look = smoothstep(0.6, 3, tau));
+    return st;
+  }
+  stamp(x, z, r, t2, o) {
+    this.mask.add(x, z, r, t2, o);
+  }
+  // 'play'：WASD 自己走；'auto'：按原来的路线自动演示
+  setMode(mode) {
+    mode === "play" && this.mode === "auto" && (this.player.reset(this.girl.root.position, this.facing), this.orbit.yaw = this.facing), this.mode = mode;
+  }
+  update(t2, dt) {
+    let R = this.R, g = this.girl, st;
+    if (this.mode === "play") {
+      let nearTree = this.bloomT !== null && Math.hypot(this.player.pos.x - this.treeBase.x, this.player.pos.z - this.treeBase.z) < 8;
+      st = this.player.update(dt, this.input, this.orbit.yaw, nearTree), this.facing = st.facing;
+    } else {
+      if (st = this.state(t2), st.dir && st.dir.lengthSq() > 1e-6) {
+        let d = Math.atan2(st.dir.x, st.dir.z) - this.facing;
+        d = Math.atan2(Math.sin(d), Math.cos(d)), this.facing += d * Math.min(1, dt * 8);
+      }
+      st.run = 0;
+    }
+    if (g.root.position.copy(st.pos), g.root.rotation.y = this.facing, !this.firstStamp && t2 > (this.mode === "play" ? 0.8 : 1.6) && (this.firstStamp = !0, this.stamp(st.pos.x, st.pos.z, 4.2, t2, { dur: 2.2 })), st.walkAmt > 0.15 && st.hop < 0) {
+      let step2 = Math.floor(st.phase / Math.PI);
+      if (step2 !== this.lastStep) {
+        this.lastStep = step2;
+        let side = step2 % 2 ? 1 : -1, fx = st.pos.x + Math.cos(this.facing) * 0.06 * side, fz = st.pos.z - Math.sin(this.facing) * 0.06 * side;
+        this.stamp(fx, fz, 2.5 + R() * 0.6, t2, { dur: 1.3 });
+        let n = 1 + (R() < 0.6 ? 1 : 0);
+        for (let k = 0; k < n; k++) {
+          let a = R() * Math.PI * 2, d = 1.8 + R() * 2.6;
+          this.stamp(fx + Math.cos(a) * d, fz + Math.sin(a) * d, 1.5 + R() * 1.1, t2, { delay: 0.3 + R() * 0.9, dur: 1.8 });
+        }
+      }
+    }
+    if (!this.flooded && Math.abs(st.pos.z - streamZ(st.pos.x)) < 2.95) {
+      this.flooded = !0;
+      let x0 = st.pos.x;
+      for (let k = 0; k < 34; k++)
+        for (let side of [-1, 1]) {
+          if (k === 0 && side > 0) continue;
+          let x = x0 + side * k * 1.3;
+          this.stamp(x, streamZ(x) + (R() - 0.5) * 0.6, 3.6 + R() * 0.9, t2, { delay: 0.25 + k * 0.085, dur: 1.2 });
+        }
+    }
+    this.mode === "auto" && st.i !== this.segIdx && (this.segIdx = st.i, st.seg.land && this.stamp(st.seg.p.x, st.seg.p.z, 1.9, t2, { dur: 0.9 })), st.landed && this.stamp(st.landed.x, st.landed.z, 1.9, t2, { dur: 0.9 });
+    let dTree = Math.hypot(st.pos.x - this.treeBase.x, st.pos.z - this.treeBase.z);
+    if (this.bloomT === null && dTree < 12.5 && (this.bloomT = t2), this.bloomT !== null) {
+      let b = t2 - this.bloomT;
+      U.uBloom.value = smoothstep(0, 3.8, b);
+      let r = 0;
+      b < 2.6 ? r = 11.5 * (1 - Math.pow(1 - b / 2.6, 3)) : b < 4 ? r = 11.5 : r = 11.5 + 140 * smoothstep(0, 1, (b - 4) / 7.5), U.uBurstR.value = r, U.uSky.value = smoothstep(5, 11, b), U.uPetalT.value = b - 0.6, st.wind = smoothstep(1, 4, b);
+    }
+    g.pose(st, t2, dt);
+    let ground = terrainH(st.pos.x, st.pos.z);
+    U.uGirl.value.set(st.pos.x, st.pos.z, Math.max(0, st.pos.y - Math.max(ground, -0.05)), 0), this.updateCamera(t2, dt, st);
+  }
+  shot(t2, G) {
+    let T = this.treeBase, add = (x, y, z) => G.clone().add(V2(x, y, z));
+    if (t2 < 5) return { pos: add(3.8, 3, 8.5), look: add(-0.5, 1.2, -10) };
+    if (t2 < this.tBank - 0.8) return { pos: add(2.4, 1.9, 5.2), look: add(0, 0.9, -6) };
+    if (t2 < this.tCrossEnd + 1.2) {
+      let C = this.world.crossing;
+      return { pos: V2(C.x + 6.2, 1.3, G.z + 1.8), look: V2(G.x, G.y + 0.45, G.z - 0.6) };
+    }
+    let b = this.bloomT === null ? -1 : t2 - this.bloomT;
+    if (b < 1.5) return { pos: add(-2.2, 1.35, 4.2), look: add(0.4, 2.4, -9) };
+    let head = add(0, 1.1, 0), crown = T.clone().add(V2(0, 5.2, 0));
+    if (b < 8.5) return { pos: add(-3.6, 1, 7), look: head.clone().lerp(crown, 0.6), fov: 38 };
+    let k = smoothstep(8.5, 20, b), off = V2(-3.6, 1, 7).lerp(V2(4.6, 0.95, -0.6), k), endLook = G.clone().lerp(T, 0.4).setY(G.y + 1.9);
+    return { pos: G.clone().add(off), look: head.clone().lerp(crown, 0.6).lerp(endLook, k), fov: 38 + 14 * k };
+  }
+  updateCamera(t2, dt, st) {
+    let play = this.mode === "play", want = play ? this.orbit.desired(dt, this.input, st.pos, this.facing, (st.walkAmt > 0.1 || st.hop >= 0) && this.input.axis().z > 0, this.world.colliders) : this.shot(t2, st.pos), cam = this.camera;
+    this.camInit || (this.camInit = !0, this.camPos = want.pos.clone(), this.camLook = want.look.clone(), cam.fov = want.fov || 38, cam.updateProjectionMatrix()), this.camPos.lerp(want.pos, 1 - Math.exp(-dt * (play ? 7 : 1.6))), this.camLook.lerp(want.look, 1 - Math.exp(-dt * (play ? 12 : 2.2)));
+    let minY = terrainH(this.camPos.x, this.camPos.z) + 0.35;
+    this.camPos.y < minY && (this.camPos.y = minY), cam.position.copy(this.camPos), cam.lookAt(this.camLook);
+    let fov = want.fov || 38;
+    Math.abs(cam.fov - fov) > 0.01 && (cam.fov += (fov - cam.fov) * (1 - Math.exp(-dt * 1.5)), cam.updateProjectionMatrix()), this.world.sky.position.copy(this.camPos);
+  }
+};
+
+// js/main.js
+THREE10.ColorManagement.enabled = !1;
+var params = new URLSearchParams(location.search), renderer = new THREE10.WebGLRenderer({ antialias: !1, powerPreference: "high-performance" });
+renderer.outputColorSpace = THREE10.LinearSRGBColorSpace;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+document.body.appendChild(renderer.domElement);
+var scene = new THREE10.Scene(), camera = new THREE10.PerspectiveCamera(38, innerWidth / innerHeight, 0.3, 700), mask = new ColorMask();
+U.uMask.value = mask.tex;
+U.uMaskB.value.copy(mask.bounds);
+var world = buildWorld(scene), girl = new Girl();
+scene.add(girl.root);
+scene.add(makePetals(900));
+var input = new Input(renderer.domElement), director = new Director(world, girl, mask, camera, input);
+params.has("auto") && (director.mode = "auto");
+var rt = new THREE10.WebGLRenderTarget(1, 1, {
+  depthTexture: new THREE10.DepthTexture(1, 1),
+  minFilter: THREE10.LinearFilter,
+  magFilter: THREE10.LinearFilter
+}), post = postMat();
+post.uniforms.tColor.value = rt.texture;
+post.uniforms.tDepth.value = rt.depthTexture;
+post.uniforms.uNear.value = camera.near;
+post.uniforms.uFar.value = camera.far;
+var quad = new THREE10.Mesh(new THREE10.PlaneGeometry(2, 2), post);
+quad.frustumCulled = !1;
+var postScene = new THREE10.Scene();
+postScene.add(quad);
+var postCam = new THREE10.Camera();
+function resize() {
+  let w = innerWidth, h = innerHeight, pr = renderer.getPixelRatio();
+  renderer.setSize(w, h), rt.setSize(Math.floor(w * pr), Math.floor(h * pr)), post.uniforms.uRes.value.set(Math.floor(w * pr), Math.floor(h * pr)), post.uniforms.uPx.value = pr, camera.aspect = w / h, camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize);
+resize();
+var titleEl = document.getElementById("title"), replayEl = document.getElementById("replay");
+function step(t2, dt) {
+  U.uTime.value = t2, director.update(t2, dt), mask.update(t2), post.uniforms.uTime.value = t2, post.uniforms.uWarm.value = U.uSky.value;
+}
+var t = 0;
+function restart(t0 = 0) {
+  for (director.reset(), t = 0; t < t0; t += 1 / 30) step(t, 1 / 30);
+}
+restart(parseFloat(params.get("t") || "0"));
+var paused = params.has("pause"), hintEl = document.getElementById("hint"), modeEl = document.getElementById("mode"), stickEl = document.getElementById("stick"), knobEl = document.getElementById("stick-knob"), jumpBtnEl = document.getElementById("jump-btn"), isTouch = matchMedia("(hover: none) and (pointer: coarse)").matches || "ontouchstart" in window;
+isTouch && (document.body.classList.add("touch-ui"), hintEl.textContent = "\u5DE6\u4E0B\u6447\u6746\u8D70\u52A8\uFF08\u63A8\u5230\u5E95\u8DD1\uFF09\xB7 \u6ED1\u5C4F\u8F6C\u89C6\u89D2 \xB7 \u53CC\u6307\u7F29\u653E");
+var stickPtr = null, moveStick = (e) => {
+  let r = stickEl.getBoundingClientRect(), maxR = r.width * 0.36, cx = r.left + r.width / 2, cy = r.top + r.height / 2, dx = e.clientX - cx, dy = e.clientY - cy, d = Math.hypot(dx, dy);
+  d > maxR && (dx = dx / d * maxR, dy = dy / d * maxR), knobEl.style.transform = `translate3d(${dx}px, ${dy}px, 0)`, input.setStick(dx / maxR, -dy / maxR);
+}, resetStick = () => {
+  stickPtr = null, knobEl.style.transform = "", input.setStick(0, 0);
+};
+stickEl.addEventListener("pointerdown", (e) => {
+  e.stopPropagation(), stickPtr = e.pointerId, stickEl.setPointerCapture(e.pointerId), moveStick(e);
+});
+stickEl.addEventListener("pointermove", (e) => {
+  e.pointerId === stickPtr && (e.stopPropagation(), moveStick(e));
+});
+stickEl.addEventListener("pointerup", (e) => {
+  e.pointerId === stickPtr && (e.stopPropagation(), resetStick());
+});
+stickEl.addEventListener("pointercancel", (e) => {
+  e.pointerId === stickPtr && resetStick();
+});
+jumpBtnEl.addEventListener("pointerdown", (e) => {
+  e.stopPropagation(), input.jump = !0, input.touched = !0;
+});
+function syncUI() {
+  modeEl.textContent = director.mode === "auto" ? "\u{1F3AE} \u81EA\u5DF1\u8D70" : "\u25B6 \u81EA\u52A8\u6F14\u793A", replayEl.textContent = director.mode === "auto" ? "\u21BB \u91CD\u65B0\u64AD\u653E" : "\u21BB \u91CD\u65B0\u5F00\u59CB";
+}
+syncUI();
+replayEl.addEventListener("click", () => restart(0));
+modeEl.addEventListener("click", () => {
+  director.mode = director.mode === "auto" ? "play" : "auto", restart(0), syncUI(), modeEl.blur();
+});
+addEventListener("keydown", (e) => {
+  e.code === "KeyR" && restart(0), director.mode === "auto" && ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code) && (director.setMode("play"), syncUI());
+});
+var last = performance.now();
+function frame(now) {
+  let dt = Math.min(0.05, (now - last) / 1e3);
+  if (last = now, paused || (t += dt), params.has("record") || step(t, paused ? 1 / 60 : dt), window.__cam) {
+    let g = director.girl.root.position, { off, look } = window.__cam;
+    camera.position.set(g.x + off[0], g.y + off[1], g.z + off[2]), camera.lookAt(g.x + look[0], g.y + look[1], g.z + look[2]);
+  }
+  let showPlay = director.mode === "play" && t > 1;
+  titleEl.classList.toggle("show", t > 0.5 && t < 4.2 && !(director.mode === "play" && input.touched)), hintEl.classList.toggle("show", showPlay && !(input.touched && t > 9)), stickEl.classList.toggle("show", showPlay), jumpBtnEl.classList.toggle("show", showPlay), replayEl.classList.toggle("show", director.mode === "play" ? t > 3 : director.bloomT !== null && t - director.bloomT > 16), modeEl.classList.toggle("show", t > 3), renderer.setRenderTarget(rt), renderer.render(scene, camera), renderer.setRenderTarget(null), renderer.render(postScene, postCam), requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+window.__dbg = { director, U, scene, camera, input, get t() {
+  return t;
+} };
+window.__seek = (tt, hold = !0) => {
+  restart(tt), paused = hold;
+};
+window.__sim = (keys, sec, yaw) => {
+  keys.forEach((k) => input.keys.add(k));
+  for (let i = 0; i < sec * 30; i++)
+    yaw !== void 0 && (director.orbit.yaw = yaw), t += 1 / 30, step(t, 1 / 30);
+  keys.forEach((k) => input.keys.delete(k));
+  let p = director.girl.root.position;
+  return [+p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)];
+};
+
+</script>
+</body>
+</html>
