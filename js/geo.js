@@ -47,10 +47,10 @@ export function lumpy(r, detail, seed, amp = 0.22, flatBottom = 0.72) {
 }
 
 // 两点之间的锥形圆柱（树干、树枝、手臂）
-export function limb(a, b, r0, r1, seg = 7) {
+export function limb(a, b, r0, r1, seg = 7, openEnded = false) {
   const dir = new THREE.Vector3().subVectors(b, a);
   const len = dir.length();
-  const g = new THREE.CylinderGeometry(r1, r0, len, seg, 3, true);
+  const g = new THREE.CylinderGeometry(r1, r0, len, seg, 3, openEnded);
   g.translate(0, len / 2, 0);
   g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(V3(0, 1, 0), dir.normalize()));
   g.translate(a.x, a.y, a.z);

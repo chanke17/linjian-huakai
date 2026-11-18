@@ -730,8 +730,8 @@ function lumpy(r, detail, seed, amp = 0.22, flatBottom = 0.72) {
   }
   return g.computeVertexNormals(), g;
 }
-function limb(a, b, r0, r1, seg = 7) {
-  let dir = new THREE3.Vector3().subVectors(b, a), len = dir.length(), g = new THREE3.CylinderGeometry(r1, r0, len, seg, 3, !0);
+function limb(a, b, r0, r1, seg = 7, openEnded = !1) {
+  let dir = new THREE3.Vector3().subVectors(b, a), len = dir.length(), g = new THREE3.CylinderGeometry(r1, r0, len, seg, 3, openEnded);
   return g.translate(0, len / 2, 0), g.applyQuaternion(new THREE3.Quaternion().setFromUnitVectors(V3(0, 1, 0), dir.normalize())), g.translate(a.x, a.y, a.z), g;
 }
 function fluffNormals(geo, center, k = 0.45) {
@@ -811,8 +811,13 @@ function buildForest(scene2) {
 function buildBlossomTree(scene2) {
   let R = rng(5), base = V3(TREE.x, terrainH(TREE.x, TREE.z) - 0.1, TREE.z), segs = [], clumps = [];
   function grow(a, dir, len, rad, depth) {
-    let b = a.clone().addScaledVector(dir, len), mid = a.clone().lerp(b, 0.5).add(V3((R() - 0.5) * len * 0.15, (R() - 0.3) * len * 0.1, (R() - 0.5) * len * 0.15));
-    if (segs.push(limb(a, mid, rad, rad * 0.86, 8), limb(mid, b, rad * 0.86, rad * 0.72, 8)), depth === 0) {
+    let b = a.clone().addScaledVector(dir, len), mid = a.clone().lerp(b, 0.5).add(V3((R() - 0.5) * len * 0.15, (R() - 0.3) * len * 0.1, (R() - 0.5) * len * 0.15)), segDir1 = mid.clone().sub(a).normalize(), segDir2 = b.clone().sub(mid).normalize();
+    segs.push(
+      limb(a.clone().addScaledVector(segDir1, -rad * 0.25), mid.clone().addScaledVector(segDir1, rad * 0.2), rad, rad * 0.86, 8),
+      limb(mid.clone().addScaledVector(segDir2, -rad * 0.2), b.clone().addScaledVector(segDir2, rad * 0.2), rad * 0.86, rad * 0.72, 8)
+    );
+    let joint = new THREE4.SphereGeometry(rad * 0.84, 7, 6);
+    if (joint.translate(mid.x, mid.y, mid.z), segs.push(joint), depth === 0) {
       clumps.push({ p: b, r: 0.95 + R() * 0.45 }), clumps.push({ p: b.clone().add(V3((R() - 0.5) * 1.4, (R() - 0.2) * 0.8, (R() - 0.5) * 1.4)), r: 0.7 + R() * 0.4 });
       return;
     }
@@ -824,7 +829,7 @@ function buildBlossomTree(scene2) {
     }
   }
   grow(base, V3(0.05, 1, 0.02).normalize(), 3, 0.5, 4);
-  let trunkGeo = finalize(mergeGeometries(segs), (v) => mixC(col(0.3, 0.21, 0.19), col(0.5, 0.38, 0.32), smoothstep(base.y, base.y + 7, v.y)), 0), trunk = new THREE4.Mesh(trunkGeo, uberMat());
+  let trunkGeo = finalize(mergeGeometries(segs), (v) => mixC(col(0.3, 0.21, 0.19), col(0.5, 0.38, 0.32), smoothstep(base.y, base.y + 7, v.y)), 0), trunk = new THREE4.Mesh(trunkGeo, uberMat({ side: THREE4.DoubleSide }));
   scene2.add(trunk);
   let cg = finalize(lumpy(1, 3, 3.3, 0.28), (v) => mixC(col(0.8, 0.7, 0.78), col(1, 1, 1), smoothstep(-1, 0.8, v.y)), 1), mesh = new THREE4.InstancedMesh(cg, uberMat({ blossom: !0 }), clumps.length), pinks = [col(1, 0.76, 0.83), col(0.98, 0.69, 0.79), col(1, 0.84, 0.88), col(0.99, 0.79, 0.85), col(1, 0.91, 0.93)];
   return placeInstances(mesh, clumps.map((c) => ({ x: c.p.x, y: c.p.y, z: c.p.z, s: c.r, sy: 0.8, ry: R() * 6.28 })), () => pinks[Math.floor(R() * pinks.length)]), mesh.frustumCulled = !1, scene2.add(mesh), { base };
@@ -1157,7 +1162,7 @@ import * as THREE9 from "three";
 
 // js/player.js
 import * as THREE8 from "three";
-var STRIDE = 0.46, WALK = 1.55, RUN = 3.1, clamp = (v, a, b) => Math.min(b, Math.max(a, v)), wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a)), Input = class {
+var STRIDE = 0.56, WALK = 2.35, RUN = 4.3, clamp = (v, a, b) => Math.min(b, Math.max(a, v)), wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a)), Input = class {
   constructor(el) {
     this.keys = /* @__PURE__ */ new Set(), this.stick = { x: 0, z: 0 }, this.dYaw = 0, this.dPitch = 0, this.dZoom = 0, this.lastDrag = -1e9, this.jump = !1, this.touched = !1;
     let watch = ["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "ShiftLeft", "ShiftRight"];
@@ -1195,7 +1200,7 @@ var STRIDE = 0.46, WALK = 1.55, RUN = 3.1, clamp = (v, a, b) => Math.min(b, Math
   }
   axis() {
     let k = this.keys, on = (...c) => c.some((x) => k.has(x)), kx = (on("KeyD", "ArrowRight") ? 1 : 0) - (on("KeyA", "ArrowLeft") ? 1 : 0), kz = (on("KeyW", "ArrowUp") ? 1 : 0) - (on("KeyS", "ArrowDown") ? 1 : 0), mag = Math.hypot(this.stick.x, this.stick.z);
-    return mag > 0.08 ? { x: this.stick.x, z: this.stick.z, run: mag > 0.78 || on("ShiftLeft", "ShiftRight") } : { x: kx, z: kz, run: on("ShiftLeft", "ShiftRight") };
+    return mag > 0.08 ? { x: this.stick.x, z: this.stick.z, run: mag > 0.62 || on("ShiftLeft", "ShiftRight") } : { x: kx, z: kz, run: on("ShiftLeft", "ShiftRight") };
   }
 }, Player = class {
   constructor(world2) {
@@ -1284,11 +1289,14 @@ var STRIDE = 0.46, WALK = 1.55, RUN = 3.1, clamp = (v, a, b) => Math.min(b, Math
     this.yaw = Math.PI, this.pitch = 0.3, this.dist = 4.4;
   }
   desired(dt, input2, girlPos, facing, moving, colliders = []) {
-    this.yaw += input2.dYaw, this.pitch = clamp(this.pitch + input2.dPitch, 0.02, 1.15), this.dist = clamp(this.dist * (1 + input2.dZoom), 2, 11), input2.dYaw = input2.dPitch = input2.dZoom = 0, moving && performance.now() - input2.lastDrag > 1500 && (this.yaw += wrap(facing - this.yaw) * (1 - Math.exp(-dt * 1.1)));
-    let look = girlPos.clone().add(new THREE8.Vector3(0, 0.8, 0)), f = new THREE8.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)), at = (d2) => look.clone().addScaledVector(f, -d2 * Math.cos(this.pitch)).add(new THREE8.Vector3(0, d2 * Math.sin(this.pitch), 0)), hit = (p) => colliders.some((c) => {
+    this.yaw += input2.dYaw, this.pitch = clamp(this.pitch + input2.dPitch, -1.05, 1.15), this.dist = clamp(this.dist * (1 + input2.dZoom), 2, 11), input2.dYaw = input2.dPitch = input2.dZoom = 0, moving && performance.now() - input2.lastDrag > 1500 && (this.yaw += wrap(facing - this.yaw) * (1 - Math.exp(-dt * 1.1)));
+    let upLook = Math.max(0, -this.pitch), look = girlPos.clone().add(new THREE8.Vector3(0, 0.8 + upLook * 3.6, 0)), f = new THREE8.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)), at = (d2) => {
+      let p = look.clone().addScaledVector(f, -d2 * Math.cos(this.pitch)).add(new THREE8.Vector3(0, d2 * Math.sin(this.pitch), 0));
+      return p.y = Math.max(p.y, terrainH(p.x, p.z) + 0.28), p;
+    }, hit = (p) => colliders.some((c) => {
       let dx = p.x - c.x, dz = p.z - c.z, rr = c.r + 0.35;
       return dx * dx + dz * dz < rr * rr && p.y < terrainH(c.x, c.z) + c.h;
-    }), d = this.dist, pos = at(d);
+    }), d = this.pitch < 0 ? this.dist * Math.max(0.5, 1 + this.pitch * 0.45) : this.dist, pos = at(d);
     for (let i = 0; i < 14 && hit(pos) && d > 1.2; i++) pos = at(d *= 0.86);
     return { pos, look };
   }

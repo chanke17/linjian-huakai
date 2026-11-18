@@ -111,7 +111,16 @@ export function buildBlossomTree(scene) {
   function grow(a, dir, len, rad, depth) {
     const b = a.clone().addScaledVector(dir, len);
     const mid = a.clone().lerp(b, 0.5).add(V3((R() - 0.5) * len * 0.15, (R() - 0.3) * len * 0.1, (R() - 0.5) * len * 0.15));
-    segs.push(limb(a, mid, rad, rad * 0.86, 8), limb(mid, b, rad * 0.86, rad * 0.72, 8));
+    const segDir1 = mid.clone().sub(a).normalize();
+    const segDir2 = b.clone().sub(mid).normalize();
+    // 端点微幅延伸重叠 + 节点球体，彻底消除仰视时树干折角与分叉处的缝隙
+    segs.push(
+      limb(a.clone().addScaledVector(segDir1, -rad * 0.25), mid.clone().addScaledVector(segDir1, rad * 0.2), rad, rad * 0.86, 8),
+      limb(mid.clone().addScaledVector(segDir2, -rad * 0.2), b.clone().addScaledVector(segDir2, rad * 0.2), rad * 0.86, rad * 0.72, 8)
+    );
+    const joint = new THREE.SphereGeometry(rad * 0.84, 7, 6);
+    joint.translate(mid.x, mid.y, mid.z);
+    segs.push(joint);
     if (depth === 0) {
       clumps.push({ p: b, r: 0.95 + R() * 0.45 });
       clumps.push({ p: b.clone().add(V3((R() - 0.5) * 1.4, (R() - 0.2) * 0.8, (R() - 0.5) * 1.4)), r: 0.7 + R() * 0.4 });
@@ -131,7 +140,7 @@ export function buildBlossomTree(scene) {
   grow(base, V3(0.05, 1, 0.02).normalize(), 3.0, 0.5, 4);
 
   const trunkGeo = finalize(mergeGeometries(segs), (v) => mixC(col(0.30, 0.21, 0.19), col(0.50, 0.38, 0.32), smoothstep(base.y, base.y + 7, v.y)), 0);
-  const trunk = new THREE.Mesh(trunkGeo, uberMat());
+  const trunk = new THREE.Mesh(trunkGeo, uberMat({ side: THREE.DoubleSide }));
   scene.add(trunk);
 
   const cg = finalize(lumpy(1, 3, 3.3, 0.28), (v) => mixC(col(0.80, 0.70, 0.78), col(1, 1, 1), smoothstep(-1, 0.8, v.y)), 1);

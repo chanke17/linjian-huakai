@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { pathX, streamZ, terrainH, WATER_Y, smoothstep } from './terrain.js';
 
-const STRIDE = 0.46;
-const WALK = 1.55, RUN = 3.1;
+const STRIDE = 0.56;
+const WALK = 2.35, RUN = 4.3;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
@@ -69,7 +69,7 @@ export class Input {
     const kz = (on('KeyW', 'ArrowUp') ? 1 : 0) - (on('KeyS', 'ArrowDown') ? 1 : 0);
     const mag = Math.hypot(this.stick.x, this.stick.z);
     if (mag > 0.08) {
-      return { x: this.stick.x, z: this.stick.z, run: mag > 0.78 || on('ShiftLeft', 'ShiftRight') };
+      return { x: this.stick.x, z: this.stick.z, run: mag > 0.62 || on('ShiftLeft', 'ShiftRight') };
     }
     return { x: kx, z: kz, run: on('ShiftLeft', 'ShiftRight') };
   }
@@ -209,19 +209,25 @@ export class OrbitCam {
   constructor() { this.yaw = Math.PI; this.pitch = 0.3; this.dist = 4.4; }
   desired(dt, input, girlPos, facing, moving, colliders = []) {
     this.yaw += input.dYaw;
-    this.pitch = clamp(this.pitch + input.dPitch, 0.02, 1.15);
+    this.pitch = clamp(this.pitch + input.dPitch, -1.05, 1.15);
     this.dist = clamp(this.dist * (1 + input.dZoom), 2.0, 11);
     input.dYaw = input.dPitch = input.dZoom = 0;
     if (moving && performance.now() - input.lastDrag > 1500) this.yaw += wrap(facing - this.yaw) * (1 - Math.exp(-dt * 1.1));
-    const look = girlPos.clone().add(new THREE.Vector3(0, 0.8, 0));
+    const upLook = Math.max(0, -this.pitch);
+    const look = girlPos.clone().add(new THREE.Vector3(0, 0.8 + upLook * 3.6, 0));
     const f = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
-    // 镜头被灌木/树干挡住就往前收，避免钻进树丛
-    const at = (d) => look.clone().addScaledVector(f, -d * Math.cos(this.pitch)).add(new THREE.Vector3(0, d * Math.sin(this.pitch), 0));
+    // 镜头被灌木/树干挡住就往前收，避免钻进树丛；仰视时保证不穿地
+    const at = (d) => {
+      const p = look.clone().addScaledVector(f, -d * Math.cos(this.pitch)).add(new THREE.Vector3(0, d * Math.sin(this.pitch), 0));
+      p.y = Math.max(p.y, terrainH(p.x, p.z) + 0.28);
+      return p;
+    };
     const hit = (p) => colliders.some((c) => {
       const dx = p.x - c.x, dz = p.z - c.z, rr = c.r + 0.35;
       return dx * dx + dz * dz < rr * rr && p.y < terrainH(c.x, c.z) + c.h;
     });
-    let d = this.dist, pos = at(d);
+    let d = this.pitch < 0 ? this.dist * Math.max(0.5, 1 + this.pitch * 0.45) : this.dist;
+    let pos = at(d);
     for (let i = 0; i < 14 && hit(pos) && d > 1.2; i++) pos = at((d *= 0.86));
     return { pos, look };
   }
