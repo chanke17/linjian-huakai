@@ -27,9 +27,15 @@ uniform float uBloom;
 uniform vec4 uCloak;
 uniform vec2 uCloakY;
 varying vec3 vW; varying vec3 vN; varying vec3 vC; varying float vT;
+#ifdef MAP
+varying vec2 vUv;
+#endif
 void main(){
   vec3 p = position;
   vT = aTint;
+#ifdef MAP
+  vUv = uv;
+#endif
   vec3 col = aCol;
 #ifdef USE_INSTANCING_COLOR
   col = mix(col, col * instanceColor, aTint);
@@ -80,8 +86,16 @@ void main(){
 
 const UBER_FS = /* glsl */ `
 varying vec3 vW; varying vec3 vN; varying vec3 vC;
+#ifdef MAP
+uniform sampler2D uMap;
+varying vec2 vUv;
+#endif
 void main(){
   vec3 N = normalize(vN);
+  vec3 base = vC;
+#ifdef MAP
+  base *= texture2D(uMap, vUv).rgb;
+#endif
 #ifndef NOFLIP
   N = gl_FrontFacing ? N : -N;
 #endif
@@ -90,19 +104,19 @@ void main(){
   r = 1.0;
 #endif
   vec3 V = normalize(cameraPosition - vW);
-  vec3 cc = painted(vC, N, V, vW);
-  vec3 sk = sketched(vC, N, vW);
+  vec3 cc = painted(base, N, V, vW);
+  vec3 sk = sketched(base, N, vW);
   gl_FragColor = vec4(finish(sk, cc, r, vW), 1.0);
 }
 `;
 
 export function uberMat(opt = {}) {
   const defines = {};
-  for (const k of ['always', 'wind', 'blossom', 'cloak', 'flower', 'noflip', 'foliage', 'grass']) if (opt[k]) defines[k.toUpperCase()] = 1;
+  for (const k of ['always', 'wind', 'blossom', 'cloak', 'flower', 'noflip', 'foliage', 'grass', 'map']) if (opt[k]) defines[k.toUpperCase()] = 1;
   return new THREE.ShaderMaterial({
     defines,
     side: opt.side ?? THREE.FrontSide,
-    uniforms: { ...U, uWind: { value: opt.wind || 0 }, uCloak: { value: new THREE.Vector4() }, uCloakY: { value: new THREE.Vector2(1.02, 0.45) } },
+    uniforms: { ...U, uWind: { value: opt.wind || 0 }, uCloak: { value: new THREE.Vector4() }, uCloakY: { value: new THREE.Vector2(1.02, 0.45) }, uMap: { value: opt.map || null } },
     vertexShader: NOISE + COMMON + UBER_VS,
     fragmentShader: NOISE + COMMON + FRAG + UBER_FS,
   });

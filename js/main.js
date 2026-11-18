@@ -3,6 +3,7 @@ import { U } from './materials.js';
 import { postMat, makePetals } from './fx.js';
 import { buildWorld } from './world.js';
 import { Girl } from './girl.js';
+import { HoodGirl } from './hood.js';
 import { ColorMask } from './mask.js';
 import { Director } from './director.js';
 import { Input } from './player.js';
@@ -23,7 +24,7 @@ U.uMask.value = mask.tex;
 U.uMaskB.value.copy(mask.bounds);
 
 const world = buildWorld(scene);
-const girl = new Girl();
+const girl = params.has('oldgirl') ? new Girl() : new HoodGirl();   // ?oldgirl 换回代码捏的旧版
 scene.add(girl.root);
 scene.add(makePetals(900));
 const input = new Input(renderer.domElement);
@@ -144,12 +145,7 @@ addEventListener('keydown', (e) => {
   }
 });
 
-let last = performance.now();
-function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
-  last = now;
-  if (!paused) t += dt;
-  if (!params.has('record')) step(t, paused ? 1 / 60 : dt);   // 录屏模式由外部逐帧推进
+function draw() {
   if (window.__cam) {   // 调试特写：__cam = { off:[x,y,z], look:[x,y,z] }（相对女孩脚底）
     const g = director.girl.root.position, { off, look } = window.__cam;
     camera.position.set(g.x + off[0], g.y + off[1], g.z + off[2]);
@@ -166,9 +162,22 @@ function frame(now) {
   renderer.render(scene, camera);
   renderer.setRenderTarget(null);
   renderer.render(postScene, postCam);
+}
+
+const recording = params.has('record');
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  if (!recording) {   // 录屏模式：时间不自己走，由外部 __frame() 逐帧推进并绘制
+    if (!paused) t += dt;
+    step(t, paused ? 1 / 60 : dt);
+    draw();
+  }
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+window.__frame = () => { t += 1 / 30; step(t, 1 / 30); draw(); return t; };
 // 调试用：__seek(秒) 跳到某一刻并暂停
 window.__dbg = { director, U, scene, camera, input, get t() { return t; } };
 window.__seek = (tt, hold = true) => { restart(tt); paused = hold; };
