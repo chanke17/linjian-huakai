@@ -12,12 +12,13 @@ export class Input {
     this.keys = new Set();
     this.stick = { x: 0, z: 0 };
     this.dYaw = 0; this.dPitch = 0; this.dZoom = 0;
-    this.lastDrag = -1e9; this.jump = false; this.touched = false;
-    const watch = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight'];
+    this.lastDrag = -1e9; this.jump = false; this.touched = false; this.act = false;
+    const watch = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'ShiftLeft', 'ShiftRight', 'KeyE', 'Enter'];
     addEventListener('keydown', (e) => {
       if (!watch.includes(e.code)) return;
       e.preventDefault();
       if (e.code === 'Space' && !e.repeat) this.jump = true;
+      if ((e.code === 'KeyE' || e.code === 'Enter') && !e.repeat) this.act = true;   // 互动：拿起 / 使用
       this.keys.add(e.code);
       this.touched = true;
     });
@@ -105,6 +106,10 @@ export class Player {
   blocked(x, z) {
     if (z > 38 || z < -62 || Math.abs(x - pathX(z)) > 26) return true;
     for (const c of this.colliders) {
+      if (c.box) {   // 轴对齐的方形碰撞（小木屋）
+        if (x > c.box[0] - 0.2 && x < c.box[1] + 0.2 && z > c.box[2] - 0.2 && z < c.box[3] + 0.2) return true;
+        continue;
+      }
       const dx = x - c.x, dz = z - c.z, rr = c.r + 0.2;
       if (dx * dx + dz * dz < rr * rr) return true;
     }
@@ -139,7 +144,7 @@ export class Player {
     let mx = fx * a.z - fz * a.x, mz = fz * a.z + fx * a.x;
     const ml = Math.hypot(mx, mz);
     if (ml > 0) { mx /= ml; mz /= ml; }
-    const speed = ml > 0 ? (a.run ? RUN : WALK) : 0;
+    const speed = ml > 0 ? (a.run ? RUN : WALK) * (this.speedK ?? 1) : 0;
     const k = 1 - Math.exp(-dt * 9);
     this.vel.x += (mx * speed - this.vel.x) * k;
     this.vel.y += (mz * speed - this.vel.y) * k;
@@ -223,6 +228,7 @@ export class OrbitCam {
       return p;
     };
     const hit = (p) => colliders.some((c) => {
+      if (c.box) return p.x > c.box[0] - 0.35 && p.x < c.box[1] + 0.35 && p.z > c.box[2] - 0.35 && p.z < c.box[3] + 0.35 && p.y < c.h;
       const dx = p.x - c.x, dz = p.z - c.z, rr = c.r + 0.35;
       return dx * dx + dz * dz < rr * rr && p.y < terrainH(c.x, c.z) + c.h;
     });

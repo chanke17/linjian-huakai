@@ -27,6 +27,7 @@ uniform sampler2D uMask;
 uniform vec4 uMaskB;
 uniform vec3 uBurstPos;
 uniform float uBurstR;
+uniform float uRevealMin;
 uniform vec3 uSunDir;
 uniform vec3 uPaper;
 uniform vec3 uHaze;
@@ -41,7 +42,7 @@ float revealAt(vec3 w){
   float v = smoothstep(0.43, 0.57, m + (n - 0.5) * 0.6);
   float d = length(w - uBurstPos) + (n - 0.5) * 6.0;
   float b = (1.0 - smoothstep(uBurstR - 2.5, uBurstR, d)) * step(0.001, uBurstR);
-  return max(v, b);
+  return max(max(v, b), uRevealMin);
 }
 `;
 

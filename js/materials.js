@@ -17,6 +17,7 @@ export const U = {
   uTree: { value: new THREE.Vector3() },
   uPetalT: { value: -1 },
   uGroundMin: { value: -1 },
+  uRevealMin: { value: 0 },   // 最低显色（屋里给一层淡淡的水彩底，方便认出家具）
 };
 
 const UBER_VS = /* glsl */ `

@@ -3,6 +3,7 @@ import { rng, noise2, pathX, streamZ, terrainH, crossing, WATER_Y, TREE } from '
 import { V3, col, finalize, lumpy, limb, mergeGeometries, placeInstances } from './geo.js';
 import { uberMat, groundMat, waterMat, skyMat } from './materials.js';
 import { buildForest, buildBlossomTree } from './trees.js';
+import { buildCottage } from './cottage.js';
 
 function bladeGeo() {
   const segs = 4, pos = [], cols = [];
@@ -136,7 +137,9 @@ export function buildWorld(scene) {
   const colliders = buildForest(scene);
   const tree = buildBlossomTree(scene);
   colliders.push({ x: tree.base.x, z: tree.base.z, r: 0.6, h: 4 });
+  const cottage = buildCottage(scene);
+  colliders.push(cottage.collider);
   for (const rk of rocks.slice(stones.length)) colliders.push({ x: rk.x, z: rk.z, r: rk.s * 0.8, h: rk.s });
 
-  return { sky, stones, crossing: C, tree, colliders };
+  return { sky, stones, crossing: C, tree, colliders, cottage };
 }

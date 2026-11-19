@@ -7,6 +7,8 @@ import { HoodGirl } from './hood.js';
 import { ColorMask } from './mask.js';
 import { Director } from './director.js';
 import { Input } from './player.js';
+import { Hud } from './hud.js';
+import { RoomGame } from './roomgame.js';
 
 THREE.ColorManagement.enabled = false;
 
@@ -62,34 +64,71 @@ resize();
 
 const titleEl = document.getElementById('title');
 const replayEl = document.getElementById('replay');
-
-function step(t, dt) {
-  U.uTime.value = t;
-  director.update(t, dt);
-  mask.update(t);
-  post.uniforms.uTime.value = t;
-  post.uniforms.uWarm.value = U.uSky.value;
-}
-
-let t = 0;
-function restart(t0 = 0) {
-  director.reset();
-  t = 0;
-  for (; t < t0; t += 1 / 30) step(t, 1 / 30);
-}
-restart(parseFloat(params.get('t') || '0'));
-let paused = params.has('pause');
-
 const hintEl = document.getElementById('hint');
 const modeEl = document.getElementById('mode');
 const stickEl = document.getElementById('stick');
 const knobEl = document.getElementById('stick-knob');
 const jumpBtnEl = document.getElementById('jump-btn');
 const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches || 'ontouchstart' in window;
-if (isTouch) {
-  document.body.classList.add('touch-ui');
-  hintEl.textContent = '左下摇杆走动（推到底跑）· 滑屏转视角 · 双指缩放';
+if (isTouch) document.body.classList.add('touch-ui');
+const HINT = {
+  forest: isTouch ? '左下摇杆走动（推到底跑）· 滑屏转视角 · 双指缩放' : hintEl.innerHTML,
+  room: isTouch ? '摇杆走动 · 推到底会跑（会吵醒大灰狼）· 右下按钮拿东西 / 用东西'
+    : '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 走 · <kbd>Shift</kbd> 跑（会吵醒他）· <kbd>E</kbd> 拿起 / 使用 · <kbd>空格</kbd> 跳',
+};
+hintEl.innerHTML = HINT.forest;
+
+// 第一章：奶奶家（单独的屋内场景）
+const hud = new Hud(camera, isTouch);
+const room = new RoomGame(camera, input, girl, hud);
+let game = 'forest', entering = false, toldHouse = false;
+function setGame(g, now) {
+  game = g;
+  hud.room(g === 'room');
+  hintEl.innerHTML = HINT[g];
+  if (g === 'room') room.enter(now);
+  else { scene.add(girl.root); hud.prompt(null); hud.marker(null); }
 }
+// 树林里：花开以后指向奶奶家，走到门口按 E 进屋
+function forestDoor(now) {
+  const door = world.cottage.door, p = girl.root.position;
+  if (director.mode !== 'play' || entering) { hud.prompt(null); hud.marker(null); return; }
+  if (director.bloomT !== null && now - director.bloomT > 5) {
+    hud.marker(() => door.clone().setY(door.y + 2.4));
+    if (!toldHouse) { toldHouse = true; hud.toast(isTouch ? '奶奶家就在花树后面，走到门口点右下的按钮进去～' : '奶奶家就在花树后面，走到门口按 E 进去～', 4.5); }
+  }
+  const near = Math.hypot(p.x - door.x, p.z - door.z) < 1.4;
+  hud.prompt(near ? '进奶奶家' : null);
+  if (near && input.act) {
+    entering = true;
+    hud.prompt(null);
+    hud.fade(() => { setGame('room', hud.t); entering = false; });
+  }
+}
+hud.onAct = () => { input.act = true; input.touched = true; };
+hud.onEnd = (k) => { hud.end(false); if (k === 'room') room.reset(t); else restart(0); };
+
+function step(t, dt) {
+  U.uTime.value = t;
+  if (game === 'room') room.update(t, dt);
+  else { director.update(t, dt); mask.update(t); forestDoor(t); input.act = false; }
+  hud.update(t);
+  post.uniforms.uTime.value = t;
+  post.uniforms.uWarm.value = game === 'room' ? 0.35 : U.uSky.value;
+}
+
+let t = 0;
+function restart(t0 = 0) {
+  if (game !== 'forest') setGame('forest', t);
+  toldHouse = false; entering = false;
+  director.reset();
+  t = 0;
+  for (; t < t0; t += 1 / 30) step(t, 1 / 30);
+}
+restart(parseFloat(params.get('t') || '0'));
+if (params.has('room')) setGame('room', t);
+let paused = params.has('pause');
+
 let stickPtr = null;
 const moveStick = (e) => {
   const r = stickEl.getBoundingClientRect(), maxR = r.width * 0.36;
@@ -129,7 +168,7 @@ function syncUI() {
   replayEl.textContent = director.mode === 'auto' ? '↻ 重新播放' : '↻ 重新开始';
 }
 syncUI();
-replayEl.addEventListener('click', () => restart(0));
+replayEl.addEventListener('click', () => (game === 'room' ? room.reset(t) : restart(0)));
 modeEl.addEventListener('click', () => {
   director.mode = director.mode === 'auto' ? 'play' : 'auto';
   restart(0);
@@ -137,9 +176,9 @@ modeEl.addEventListener('click', () => {
   modeEl.blur();
 });
 addEventListener('keydown', (e) => {
-  if (e.code === 'KeyR') restart(0);
+  if (e.code === 'KeyR') { if (game === 'room') room.reset(t); else restart(0); }
   // 自动演示时按下方向键：就地接管
-  if (director.mode === 'auto' && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+  if (game === 'forest' && director.mode === 'auto' && ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
     director.setMode('play');
     syncUI();
   }
@@ -151,15 +190,16 @@ function draw() {
     camera.position.set(g.x + off[0], g.y + off[1], g.z + off[2]);
     camera.lookAt(g.x + look[0], g.y + look[1], g.z + look[2]);
   }
-  const showPlay = director.mode === 'play' && t > 1.0;
-  titleEl.classList.toggle('show', t > 0.5 && t < 4.2 && !(director.mode === 'play' && input.touched));
-  hintEl.classList.toggle('show', showPlay && !(input.touched && t > 9));
+  const inRoom = game === 'room';
+  const showPlay = inRoom ? room.phase === 'play' || room.phase === 'caught' : director.mode === 'play' && t > 1.0;
+  titleEl.classList.toggle('show', !inRoom && t > 0.5 && t < 4.2 && !(director.mode === 'play' && input.touched));
+  hintEl.classList.toggle('show', inRoom ? t - room.t0 < 14 : showPlay && !(input.touched && t > 9));
   stickEl.classList.toggle('show', showPlay);
   jumpBtnEl.classList.toggle('show', showPlay);
-  replayEl.classList.toggle('show', director.mode === 'play' ? t > 3 : director.bloomT !== null && t - director.bloomT > 16);
-  modeEl.classList.toggle('show', t > 3);
+  replayEl.classList.toggle('show', inRoom ? room.phase !== 'done' : director.mode === 'play' ? t > 3 : director.bloomT !== null && t - director.bloomT > 16);
+  modeEl.classList.toggle('show', !inRoom && t > 3);
   renderer.setRenderTarget(rt);
-  renderer.render(scene, camera);
+  renderer.render(inRoom ? room.scene : scene, camera);
   renderer.setRenderTarget(null);
   renderer.render(postScene, postCam);
 }
@@ -179,7 +219,8 @@ function frame(now) {
 requestAnimationFrame(frame);
 window.__frame = () => { t += 1 / 30; step(t, 1 / 30); draw(); return t; };
 // 调试用：__seek(秒) 跳到某一刻并暂停
-window.__dbg = { director, U, scene, camera, input, get t() { return t; } };
+window.__dbg = { director, U, scene, camera, input, room, hud, get t() { return t; }, get game() { return game; } };
+window.__enterRoom = () => setGame('room', t);
 window.__seek = (tt, hold = true) => { restart(tt); paused = hold; };
 // 调试：按住某些键快速模拟若干秒，例如 __sim(['KeyW'], 5)
 window.__sim = (keys, sec, yaw) => {

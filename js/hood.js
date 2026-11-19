@@ -124,6 +124,7 @@ export class HoodGirl {
     sy -= 0.11 * Math.exp(-this.landT * 9) * Math.cos(this.landT * 24);
     const breathe = Math.sin(t * 2.1) * (1 - w);
     sy += 0.008 * breathe;
+    sy *= 1 - 0.38 * (st.crouch || 0);   // 钻到桌子底下：蹲下缩成一团
 
     const B = this.body;
     B.position.y = bob;
