@@ -160,6 +160,10 @@ export class RoomGame {
     this.player.reset(SPOT.door, Math.PI / 2);
     this.player.speedK = 1;
     this.facing = Math.PI / 2;
+    // 第一人称初始朝向屋里（面向床与大灰狼方向）
+    this.fpYaw = Math.atan2(SPOT.wolfLie.x - SPOT.door.x, SPOT.wolfLie.z - SPOT.door.z);
+    this.fpPitch = -0.06;
+    this.girl.root.visible = false;
     this.wolfToBed();
     this.gw.pos.copy(SPOT.grandmaIn); this.gw.yaw = 0;
     this.grandma.root.visible = false;
@@ -188,7 +192,15 @@ export class RoomGame {
     this.queue.sort((x, y) => x.at - y.at);
   }
   anchor(who) {
-    if (who === 'girl' || who === 'think') return () => this.girl.root.position.clone().add(V(0, this.crouch ? 1.05 : 1.45, 0));
+    if (who === 'girl' || who === 'think') {
+      return () => {
+        if (!this.girl.root.visible) {
+          const dir = V(Math.sin(this.fpYaw), Math.sin(this.fpPitch), Math.cos(this.fpYaw)).normalize();
+          return this.camera.position.clone().addScaledVector(dir, 2.2).add(V(0, -0.18, 0));
+        }
+        return this.girl.root.position.clone().add(V(0, this.crouch ? 1.05 : 1.45, 0));
+      };
+    }
     if (who === 'wolf' || who === 'zzz') return () => (this.ws.s === 'trapped' ? this.items.laundry.mesh.position.clone().add(V(0, 0.45, 0)) : this.wolf.headPos().clone());
     if (who === 'grandma') return () => (this.st.gran === 'inside' ? V(3.08, 2.45, -2.75) : this.grandma.headPos().clone());
     return () => V();
@@ -222,15 +234,21 @@ export class RoomGame {
       if (q.fn) q.fn(t);
     }
 
-    // 女孩
+    // 女孩（第一人称视角控制）
     let st;
     if (this.phase === 'play') {
-      st = this.player.update(dt, inp, Math.PI, false);
-      this.facing = st.facing;
+      this.fpYaw += inp.dYaw;
+      this.fpPitch = Math.max(-1.05, Math.min(1.05, this.fpPitch - inp.dPitch));
+      inp.dYaw = inp.dPitch = inp.dZoom = 0;
+      inp.jump = false;
+      st = this.player.update(dt, inp, this.fpYaw, false);
+      this.facing = this.fpYaw;
     } else {
       st = { pos: this.player.pos.clone(), facing: this.facing, walkAmt: 0, run: 0, phase: this.player.phase, hop: -1, look: 0, wind: 0 };
+      inp.dYaw = inp.dPitch = inp.dZoom = 0;
       inp.jump = false;
     }
+    this.girl.root.visible = this.phase === 'ending' || this.phase === 'done';
     if (this.girlOverride) Object.assign(st, this.girlOverride);
     this.crouch = this.phase === 'play' && dist2(st.pos, SPOT.table) < 0.74;
     st.crouch = this.crouchK = (this.crouchK || 0) + ((this.crouch ? 1 : 0) - (this.crouchK || 0)) * Math.min(1, dt * 10);
@@ -764,21 +782,31 @@ export class RoomGame {
     this.pie.visible = on;
   }
 
-  // ——— 镜头：从南边斜上方看屋里，跟着女孩轻轻移动 ———
+  // ——— 镜头：屋内保持第一人称视角；结局切回第三人称合照 ———
   updateCamera(t, dt, st) {
     const cam = this.camera;
     const aspect = innerWidth / innerHeight;
-    const center = V(0, 0.55, -0.45);
-    let look = center.clone().lerp(st.pos.clone().setY(0.6), 0.28);
-    let dist = 11.6 * Math.max(1, 1.6 / aspect);
-    let fov = 38;
     if (this.phase === 'ending' || this.phase === 'done') {
-      look = this.endStage === 1 ? V(SPOT.table.x, 0.7, SPOT.table.z + 0.1) : this.items.laundry.mesh.position.clone().setY(0.5).lerp(st.pos, 0.3);
-      dist = 6.0 * Math.max(1, 1.3 / aspect);
+      const look = this.endStage === 1 ? V(SPOT.table.x, 0.7, SPOT.table.z + 0.1) : this.items.laundry.mesh.position.clone().setY(0.5).lerp(st.pos, 0.3);
+      const dist = 6.0 * Math.max(1, 1.3 / aspect);
+      const fov = 38;
+      const pos = look.clone().add(V(0, 0.78, 0.66).normalize().multiplyScalar(dist));
+      const k = 1 - Math.exp(-dt * 3);
+      this.camPos.lerp(pos, k);
+      this.camLook.lerp(look, k);
+      cam.position.copy(this.camPos);
+      cam.lookAt(this.camLook);
+      if (Math.abs(cam.fov - fov) > 0.01) { cam.fov = fov; cam.updateProjectionMatrix(); }
+      return;
     }
-    const pos = look.clone().add(V(0, 0.78, 0.66).normalize().multiplyScalar(dist));
+    const eyeY = (1.26 - (this.crouchK || 0) * 0.54) + Math.sin(st.phase * 2) * 0.025 * st.walkAmt;
+    const pos = st.pos.clone().setY(st.pos.y + eyeY);
+    const cp = Math.cos(this.fpPitch), sp = Math.sin(this.fpPitch);
+    const dir = V(Math.sin(this.fpYaw) * cp, sp, Math.cos(this.fpYaw) * cp);
+    const look = pos.clone().addScaledVector(dir, 2.5);
+    const fov = aspect < 1 ? 62 : 54;
     if (!this.camInit) { this.camInit = true; this.camPos.copy(pos); this.camLook.copy(look); cam.fov = fov; cam.updateProjectionMatrix(); }
-    const k = 1 - Math.exp(-dt * 3);
+    const k = 1 - Math.exp(-dt * 18);
     this.camPos.lerp(pos, k);
     this.camLook.lerp(look, k);
     cam.position.copy(this.camPos);

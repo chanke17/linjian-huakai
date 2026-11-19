@@ -73,8 +73,8 @@ const isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches || 'on
 if (isTouch) document.body.classList.add('touch-ui');
 const HINT = {
   forest: isTouch ? '左下摇杆走动（推到底跑）· 滑屏转视角 · 双指缩放' : hintEl.innerHTML,
-  room: isTouch ? '摇杆走动 · 推到底会跑（会吵醒大灰狼）· 右下按钮拿东西 / 用东西'
-    : '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 走 · <kbd>Shift</kbd> 跑（会吵醒他）· <kbd>E</kbd> 拿起 / 使用 · <kbd>空格</kbd> 跳',
+  room: isTouch ? '摇杆走动 · 推到底会跑（会吵醒他）· 滑屏转视角 · 右下按钮拿/用'
+    : '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 走 · <kbd>Shift</kbd> 跑（会吵醒他）· <kbd>E</kbd> 拿起 / 使用 · 拖动鼠标转视角',
 };
 hintEl.innerHTML = HINT.forest;
 
@@ -87,7 +87,14 @@ function setGame(g, now) {
   hud.room(g === 'room');
   hintEl.innerHTML = HINT[g];
   if (g === 'room') room.enter(now);
-  else { scene.add(girl.root); hud.prompt(null); hud.marker(null); }
+  else {
+    girl.root.visible = true;
+    camera.fov = 38;
+    camera.updateProjectionMatrix();
+    scene.add(girl.root);
+    hud.prompt(null);
+    hud.marker(null);
+  }
 }
 // 树林里：花开以后指向奶奶家，走到门口按 E 进屋
 function forestDoor(now) {
@@ -195,7 +202,7 @@ function draw() {
   titleEl.classList.toggle('show', !inRoom && t > 0.5 && t < 4.2 && !(director.mode === 'play' && input.touched));
   hintEl.classList.toggle('show', inRoom ? t - room.t0 < 14 : showPlay && !(input.touched && t > 9));
   stickEl.classList.toggle('show', showPlay);
-  jumpBtnEl.classList.toggle('show', showPlay);
+  jumpBtnEl.classList.toggle('show', showPlay && !inRoom && !hud._prompt);
   replayEl.classList.toggle('show', inRoom ? room.phase !== 'done' : director.mode === 'play' ? t > 3 : director.bloomT !== null && t - director.bloomT > 16);
   modeEl.classList.toggle('show', !inRoom && t > 3);
   renderer.setRenderTarget(rt);

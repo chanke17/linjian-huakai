@@ -135,7 +135,7 @@
   #toast.show { transform: translate(-50%, 0); }
   #goals.show, #noise.show, #prompt.show, #carry.show, #toast.show { opacity: 1; }
   #act-btn {
-    right: calc(22px + env(safe-area-inset-right)); bottom: calc(162px + env(safe-area-inset-bottom));
+    right: calc(22px + env(safe-area-inset-right)); bottom: calc(84px + env(safe-area-inset-bottom));
     min-width: 76px; padding: 12px 16px; border-radius: 999px; font-size: 16px;
     background: rgba(255, 238, 214, .95); border: 2px solid rgba(201, 71, 63, .55); box-shadow: 0 3px 12px rgba(58, 54, 51, .15);
     -webkit-tap-highlight-color: transparent;
@@ -181,17 +181,17 @@
   #endcard button:hover { background: #fff7ea; }
   body.in-room #title { display: none; }
   @media (max-width: 780px) {
-    #goals { max-width: min(200px, 50vw); padding: 8px 12px; }
+    #goals { max-width: calc(100vw - 176px); padding: 8px 10px; }
     #goals h3 { font-size: 11px; margin-bottom: 4px; }
-    #goals ul { font-size: 13.5px; line-height: 1.4; }
+    #goals ul { font-size: 13px; line-height: 1.38; }
     #goals small { display: none; }
-    #noise { left: auto; right: calc(14px + env(safe-area-inset-right)); transform: none; padding: 6px 12px 7px; }
+    #noise { left: auto; right: calc(14px + env(safe-area-inset-right)); transform: none; padding: 6px 10px 7px; }
     #noise span { font-size: 12px; }
-    #noise .bar { width: 108px; }
+    #noise .bar { width: 96px; }
     #toast { top: calc(74px + env(safe-area-inset-top)); font-size: 15px; }
     .bubble { font-size: 14px; max-width: 180px; }
   }
-  body.touch-ui #prompt { bottom: calc(200px + env(safe-area-inset-bottom)); }
+  body.touch-ui #prompt { bottom: calc(158px + env(safe-area-inset-bottom)); }
   body.touch-ui #carry { bottom: calc(198px + env(safe-area-inset-bottom)); }
   body.in-room.touch-ui #hint {
     top: auto; bottom: calc(18px + env(safe-area-inset-bottom));
@@ -199,7 +199,7 @@
     width: calc(100vw - 160px); text-align: left; font-size: 12.5px;
   }
   @media (hover: none) and (pointer: coarse) {
-    #prompt { bottom: calc(200px + env(safe-area-inset-bottom)); }
+    #prompt { bottom: calc(158px + env(safe-area-inset-bottom)); }
     #carry { bottom: calc(198px + env(safe-area-inset-bottom)); }
     body.in-room #hint {
       top: auto; bottom: calc(18px + env(safe-area-inset-bottom));
@@ -2334,7 +2334,7 @@ var wrap2 = (a) => Math.atan2(Math.sin(a), Math.cos(a)), dist2 = (a, b) => Math.
     this.t0 = t2, this.phase = "play", this.mask.reset(), RU.uBurstR.value = 0, this.noise = 0, this.carry = null, this.st = { key: "pillow", yarn: "home", laundry: "home", pepper: "home", gran: "inside", trapped: !1, everHid: !1, asked: !1, sneezed: !1, talkedTrap: !1 };
     for (let [k, it] of Object.entries(this.items))
       it.mesh.position.copy(it.home), it.mesh.rotation.copy(it.rot), it.mesh.visible = k !== "key";
-    this.items.laundry.mesh.scale.setScalar(this.laundryScale), this.trapRing.visible = !1, this.yarnLine.visible = !1, this.stick.visible = !1, this.hump.visible = !0, this.doorL.rotation.y = 0, this.doorR.rotation.y = 0, this.doorOpen = 0, this.queue = [], this.endStage = 0, this.endSaid = !1, this.girlOverride = null, this.granHintT = 0, this.endWolfPose = null, this.endGranPose = null, this.pie && (this.pie.visible = !1), RU.uBurstPos.value.set(1.5, 0.8, 0.8), this.hud.clearBubbles(), this.hud.end(!1), this.player.reset(SPOT.door, Math.PI / 2), this.player.speedK = 1, this.facing = Math.PI / 2, this.wolfToBed(), this.gw.pos.copy(SPOT.grandmaIn), this.gw.yaw = 0, this.grandma.root.visible = !1, this.camInit = !1, this.lastStep = 0, this.stamp(SPOT.door.x + 0.4, SPOT.door.z, 1.1, t2, 1.2), this.intro(t2);
+    this.items.laundry.mesh.scale.setScalar(this.laundryScale), this.trapRing.visible = !1, this.yarnLine.visible = !1, this.stick.visible = !1, this.hump.visible = !0, this.doorL.rotation.y = 0, this.doorR.rotation.y = 0, this.doorOpen = 0, this.queue = [], this.endStage = 0, this.endSaid = !1, this.girlOverride = null, this.granHintT = 0, this.endWolfPose = null, this.endGranPose = null, this.pie && (this.pie.visible = !1), RU.uBurstPos.value.set(1.5, 0.8, 0.8), this.hud.clearBubbles(), this.hud.end(!1), this.player.reset(SPOT.door, Math.PI / 2), this.player.speedK = 1, this.facing = Math.PI / 2, this.fpYaw = Math.atan2(SPOT.wolfLie.x - SPOT.door.x, SPOT.wolfLie.z - SPOT.door.z), this.fpPitch = -0.06, this.girl.root.visible = !1, this.wolfToBed(), this.gw.pos.copy(SPOT.grandmaIn), this.gw.yaw = 0, this.grandma.root.visible = !1, this.camInit = !1, this.lastStep = 0, this.stamp(SPOT.door.x + 0.4, SPOT.door.z, 1.1, t2, 1.2), this.intro(t2);
   }
   wolfToBed() {
     this.ws = { s: "sleep", t0: -1, sitUp: 0, sneeze: -1, roll: 0 }, this.ww.pos.copy(SPOT.bedOut), this.ww.path = [], this.hump.visible = !0;
@@ -2350,7 +2350,13 @@ var wrap2 = (a) => Math.atan2(Math.sin(a), Math.cos(a)), dist2 = (a, b) => Math.
     this.queue.sort((x, y) => x.at - y.at);
   }
   anchor(who) {
-    return who === "girl" || who === "think" ? () => this.girl.root.position.clone().add(V(0, this.crouch ? 1.05 : 1.45, 0)) : who === "wolf" || who === "zzz" ? () => this.ws.s === "trapped" ? this.items.laundry.mesh.position.clone().add(V(0, 0.45, 0)) : this.wolf.headPos().clone() : who === "grandma" ? () => this.st.gran === "inside" ? V(3.08, 2.45, -2.75) : this.grandma.headPos().clone() : () => V();
+    return who === "girl" || who === "think" ? () => {
+      if (!this.girl.root.visible) {
+        let dir = V(Math.sin(this.fpYaw), Math.sin(this.fpPitch), Math.cos(this.fpYaw)).normalize();
+        return this.camera.position.clone().addScaledVector(dir, 2.2).add(V(0, -0.18, 0));
+      }
+      return this.girl.root.position.clone().add(V(0, this.crouch ? 1.05 : 1.45, 0));
+    } : who === "wolf" || who === "zzz" ? () => this.ws.s === "trapped" ? this.items.laundry.mesh.position.clone().add(V(0, 0.45, 0)) : this.wolf.headPos().clone() : who === "grandma" ? () => this.st.gran === "inside" ? V(3.08, 2.45, -2.75) : this.grandma.headPos().clone() : () => V();
   }
   line(who, text, dur = 2.4) {
     this.hud.say(who === "think" ? "girl" : who === "zzz" ? "wolf" : who, this.anchor(who), text, dur, who);
@@ -2384,7 +2390,7 @@ var wrap2 = (a) => Math.atan2(Math.sin(a), Math.cos(a)), dist2 = (a, b) => Math.
       q.when && !q.when() || (q.text && this.line(q.who, q.text, q.dur ?? 2.4), q.fn && q.fn(t2));
     }
     let st;
-    this.phase === "play" ? (st = this.player.update(dt, inp, Math.PI, !1), this.facing = st.facing) : (st = { pos: this.player.pos.clone(), facing: this.facing, walkAmt: 0, run: 0, phase: this.player.phase, hop: -1, look: 0, wind: 0 }, inp.jump = !1), this.girlOverride && Object.assign(st, this.girlOverride), this.crouch = this.phase === "play" && dist2(st.pos, SPOT.table) < 0.74, st.crouch = this.crouchK = (this.crouchK || 0) + ((this.crouch ? 1 : 0) - (this.crouchK || 0)) * Math.min(1, dt * 10), this.girl.root.position.copy(st.pos), this.girl.root.rotation.y = st.facing ?? this.facing, this.girl.pose(st, t2, dt), this.gst = st;
+    this.phase === "play" ? (this.fpYaw += inp.dYaw, this.fpPitch = Math.max(-1.05, Math.min(1.05, this.fpPitch - inp.dPitch)), inp.dYaw = inp.dPitch = inp.dZoom = 0, inp.jump = !1, st = this.player.update(dt, inp, this.fpYaw, !1), this.facing = this.fpYaw) : (st = { pos: this.player.pos.clone(), facing: this.facing, walkAmt: 0, run: 0, phase: this.player.phase, hop: -1, look: 0, wind: 0 }, inp.dYaw = inp.dPitch = inp.dZoom = 0, inp.jump = !1), this.girl.root.visible = this.phase === "ending" || this.phase === "done", this.girlOverride && Object.assign(st, this.girlOverride), this.crouch = this.phase === "play" && dist2(st.pos, SPOT.table) < 0.74, st.crouch = this.crouchK = (this.crouchK || 0) + ((this.crouch ? 1 : 0) - (this.crouchK || 0)) * Math.min(1, dt * 10), this.girl.root.position.copy(st.pos), this.girl.root.rotation.y = st.facing ?? this.facing, this.girl.pose(st, t2, dt), this.gst = st;
     let sp = this.player.vel.length();
     if (this.crouch && !this.st.everHid && (this.st.everHid = !0, this.hud.toast("\u94BB\u5230\u684C\u5B50\u5E95\u4E0B\u5566\uFF0C\u5927\u7070\u72FC\u770B\u4E0D\u89C1\u4F60\uFF5E")), st.walkAmt > 0.2 && st.hop < 0 && this.phase === "play") {
       let step2 = Math.floor(st.phase / Math.PI);
@@ -2619,13 +2625,17 @@ var wrap2 = (a) => Math.atan2(Math.sin(a), Math.cos(a)), dist2 = (a, b) => Math.
     }
     this.pie.visible = on;
   }
-  // ——— 镜头：从南边斜上方看屋里，跟着女孩轻轻移动 ———
+  // ——— 镜头：屋内保持第一人称视角；结局切回第三人称合照 ———
   updateCamera(t2, dt, st) {
-    let cam = this.camera, aspect = innerWidth / innerHeight, look = V(0, 0.55, -0.45).clone().lerp(st.pos.clone().setY(0.6), 0.28), dist = 11.6 * Math.max(1, 1.6 / aspect), fov = 38;
-    (this.phase === "ending" || this.phase === "done") && (look = this.endStage === 1 ? V(SPOT.table.x, 0.7, SPOT.table.z + 0.1) : this.items.laundry.mesh.position.clone().setY(0.5).lerp(st.pos, 0.3), dist = 6 * Math.max(1, 1.3 / aspect));
-    let pos = look.clone().add(V(0, 0.78, 0.66).normalize().multiplyScalar(dist));
+    let cam = this.camera, aspect = innerWidth / innerHeight;
+    if (this.phase === "ending" || this.phase === "done") {
+      let look2 = this.endStage === 1 ? V(SPOT.table.x, 0.7, SPOT.table.z + 0.1) : this.items.laundry.mesh.position.clone().setY(0.5).lerp(st.pos, 0.3), dist = 6 * Math.max(1, 1.3 / aspect), fov2 = 38, pos2 = look2.clone().add(V(0, 0.78, 0.66).normalize().multiplyScalar(dist)), k2 = 1 - Math.exp(-dt * 3);
+      this.camPos.lerp(pos2, k2), this.camLook.lerp(look2, k2), cam.position.copy(this.camPos), cam.lookAt(this.camLook), Math.abs(cam.fov - fov2) > 0.01 && (cam.fov = fov2, cam.updateProjectionMatrix());
+      return;
+    }
+    let eyeY = 1.26 - (this.crouchK || 0) * 0.54 + Math.sin(st.phase * 2) * 0.025 * st.walkAmt, pos = st.pos.clone().setY(st.pos.y + eyeY), cp = Math.cos(this.fpPitch), sp = Math.sin(this.fpPitch), dir = V(Math.sin(this.fpYaw) * cp, sp, Math.cos(this.fpYaw) * cp), look = pos.clone().addScaledVector(dir, 2.5), fov = aspect < 1 ? 62 : 54;
     this.camInit || (this.camInit = !0, this.camPos.copy(pos), this.camLook.copy(look), cam.fov = fov, cam.updateProjectionMatrix());
-    let k = 1 - Math.exp(-dt * 3);
+    let k = 1 - Math.exp(-dt * 18);
     this.camPos.lerp(pos, k), this.camLook.lerp(look, k), cam.position.copy(this.camPos), cam.lookAt(this.camLook), Math.abs(cam.fov - fov) > 0.01 && (cam.fov = fov, cam.updateProjectionMatrix());
   }
 };
@@ -2668,12 +2678,12 @@ var titleEl = document.getElementById("title"), replayEl = document.getElementBy
 isTouch && document.body.classList.add("touch-ui");
 var HINT = {
   forest: isTouch ? "\u5DE6\u4E0B\u6447\u6746\u8D70\u52A8\uFF08\u63A8\u5230\u5E95\u8DD1\uFF09\xB7 \u6ED1\u5C4F\u8F6C\u89C6\u89D2 \xB7 \u53CC\u6307\u7F29\u653E" : hintEl.innerHTML,
-  room: isTouch ? "\u6447\u6746\u8D70\u52A8 \xB7 \u63A8\u5230\u5E95\u4F1A\u8DD1\uFF08\u4F1A\u5435\u9192\u5927\u7070\u72FC\uFF09\xB7 \u53F3\u4E0B\u6309\u94AE\u62FF\u4E1C\u897F / \u7528\u4E1C\u897F" : "<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> \u8D70 \xB7 <kbd>Shift</kbd> \u8DD1\uFF08\u4F1A\u5435\u9192\u4ED6\uFF09\xB7 <kbd>E</kbd> \u62FF\u8D77 / \u4F7F\u7528 \xB7 <kbd>\u7A7A\u683C</kbd> \u8DF3"
+  room: isTouch ? "\u6447\u6746\u8D70\u52A8 \xB7 \u63A8\u5230\u5E95\u4F1A\u8DD1\uFF08\u4F1A\u5435\u9192\u4ED6\uFF09\xB7 \u6ED1\u5C4F\u8F6C\u89C6\u89D2 \xB7 \u53F3\u4E0B\u6309\u94AE\u62FF/\u7528" : "<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> \u8D70 \xB7 <kbd>Shift</kbd> \u8DD1\uFF08\u4F1A\u5435\u9192\u4ED6\uFF09\xB7 <kbd>E</kbd> \u62FF\u8D77 / \u4F7F\u7528 \xB7 \u62D6\u52A8\u9F20\u6807\u8F6C\u89C6\u89D2"
 };
 hintEl.innerHTML = HINT.forest;
 var hud = new Hud(camera, isTouch), room = new RoomGame(camera, input, girl, hud), game = "forest", entering = !1, toldHouse = !1;
 function setGame(g, now) {
-  game = g, hud.room(g === "room"), hintEl.innerHTML = HINT[g], g === "room" ? room.enter(now) : (scene.add(girl.root), hud.prompt(null), hud.marker(null));
+  game = g, hud.room(g === "room"), hintEl.innerHTML = HINT[g], g === "room" ? room.enter(now) : (girl.root.visible = !0, camera.fov = 38, camera.updateProjectionMatrix(), scene.add(girl.root), hud.prompt(null), hud.marker(null));
 }
 function forestDoor(now) {
   let door = world.cottage.door, p = girl.root.position;
@@ -2740,7 +2750,7 @@ function draw() {
     camera.position.set(g.x + off[0], g.y + off[1], g.z + off[2]), camera.lookAt(g.x + look[0], g.y + look[1], g.z + look[2]);
   }
   let inRoom = game === "room", showPlay = inRoom ? room.phase === "play" || room.phase === "caught" : director.mode === "play" && t > 1;
-  titleEl.classList.toggle("show", !inRoom && t > 0.5 && t < 4.2 && !(director.mode === "play" && input.touched)), hintEl.classList.toggle("show", inRoom ? t - room.t0 < 14 : showPlay && !(input.touched && t > 9)), stickEl.classList.toggle("show", showPlay), jumpBtnEl.classList.toggle("show", showPlay), replayEl.classList.toggle("show", inRoom ? room.phase !== "done" : director.mode === "play" ? t > 3 : director.bloomT !== null && t - director.bloomT > 16), modeEl.classList.toggle("show", !inRoom && t > 3), renderer.setRenderTarget(rt), renderer.render(inRoom ? room.scene : scene, camera), renderer.setRenderTarget(null), renderer.render(postScene, postCam);
+  titleEl.classList.toggle("show", !inRoom && t > 0.5 && t < 4.2 && !(director.mode === "play" && input.touched)), hintEl.classList.toggle("show", inRoom ? t - room.t0 < 14 : showPlay && !(input.touched && t > 9)), stickEl.classList.toggle("show", showPlay), jumpBtnEl.classList.toggle("show", showPlay && !inRoom && !hud._prompt), replayEl.classList.toggle("show", inRoom ? room.phase !== "done" : director.mode === "play" ? t > 3 : director.bloomT !== null && t - director.bloomT > 16), modeEl.classList.toggle("show", !inRoom && t > 3), renderer.setRenderTarget(rt), renderer.render(inRoom ? room.scene : scene, camera), renderer.setRenderTarget(null), renderer.render(postScene, postCam);
 }
 var recording = params.has("record"), last = performance.now();
 function frame(now) {
